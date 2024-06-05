@@ -1,0 +1,14 @@
+name: AFKZone
+main: Luthfi\AFKZone\Main
+version: 1.0.1
+api: [5.0.0]
+depend: [EconomyAPI]
+commands:
+  afkzone:
+    description: Configure the AFK zone
+    usage: /afkzone <setworld|setposition>
+    permission: afkzone.command
+permissions:
+  afkzone.command:
+    description: Allows the player to configure the AFK zone
+    default: op
