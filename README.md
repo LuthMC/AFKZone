@@ -1,5 +1,6 @@
-# AFKZone
+# AFKZone V2
 You Can Customize How Much Money They Get! And Customize Worlds And Coordinates, Get Money Every Minutes.
+(Now support EconomyAPI & BedrockEconomy)
 
 ### Commands
 Just Type /afkzone setworld For Set World, /afkzone setposition 1 To Set Position 1, /afkzone setposition 2 To Set Position 2.
