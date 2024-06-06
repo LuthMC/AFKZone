@@ -1,4 +1,12 @@
 # AFKZone V2
+
+[![](https://poggit.pmmp.io/shield.state/AFKZone)](https://poggit.pmmp.io/p/AFKZone)
+<a href="https://poggit.pmmp.io/p/AFKZone"><img src="https://poggit.pmmp.io/shield.state/AFKZone"></a>
+
+[![](https://poggit.pmmp.io/shield.api/AFKZone)](https://poggit.pmmp.io/p/AFKZone)
+<a href="https://poggit.pmmp.io/p/AFKZone"><img src="https://poggit.pmmp.io/shield.api/AFKZone"></a>
+
+### Feature
 You Can Customize How Much Money They Get! And Customize Worlds And Coordinates, Get Money Every Minutes.
 (Now support EconomyAPI & BedrockEconomy)
 
