@@ -9,7 +9,13 @@ commands:
     usage: /afkzone <setworld|setposition>
     aliases: [az]
     permission: afkzone.command
+  settopafk:
+    description: Allow to set leaderboard
+    permission: afkzone.settopafk
 permissions:
   afkzone.command:
-    description: Allows the player to configure the AFK zone
+    description: Allows the player to configure the AFKZone
+    default: op
+  afkzone.settopafk:
+    description: Allows the player to configure the AFKZone Leaderboard
     default: op
