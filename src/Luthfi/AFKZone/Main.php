@@ -233,6 +233,8 @@ class Main extends PluginBase implements Listener {
         } else {
             EconomyAPI::getInstance()->addMoney($player, $amount);
             $player->sendMessage("You have received $amount for being in the AFK zone!");
+        }
+    }
 
     private function updatePlayerTimes(): void {
     foreach ($this->playersInZone as $name => $enterTime) {
