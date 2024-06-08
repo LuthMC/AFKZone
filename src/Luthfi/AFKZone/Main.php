@@ -187,20 +187,21 @@ class Main extends PluginBase implements Listener {
     }
 
     public function checkAfkZone(): void {
-        foreach ($this->getServer()->getOnlinePlayers() as $player) {
-            if ($this->isInAfkZone($player)) {
-                if (!isset($this->playersInZone[$player->getName()])) {
-                    $this->playersInZone[$player->getName()] = time();
-                }
-            } else {
-                if (isset($this->playersInZone[$player->getName()])) {
-                    $this->updateAfkTime($player->getName(), time() - $this->playersInZone[$player->getName()]);
-                    unset($this->playersInZone[$player->getName()]);
-                    $player->sendTitle("", "");
-                }
+    foreach ($this->getServer()->getOnlinePlayers() as $player) {
+        if ($this->isInAfkZone($player)) {
+            if (!isset($this->playersInZone[$player->getName()])) {
+                $this->playersInZone[$player->getName()] = time();
+            }
+        } else {
+            if (isset($this->playersInZone[$player->getName()])) {
+                $timeInZone = time() - $this->playersInZone[$player->getName()];
+                $this->afkTimes[$player->getName()] = ($this->afkTimes[$player->getName()] ?? 0) + $timeInZone;
+                unset($this->playersInZone[$player->getName()]);
+                $player->sendTitle("", "");
             }
         }
     }
+}
 
     private function isInAfkZone(Player $player): bool {
         $pos = $player->getPosition();
