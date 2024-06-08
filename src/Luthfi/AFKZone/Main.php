@@ -12,8 +12,8 @@ use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\world\World;
-use pocketmine\level\particle\FloatingTextParticle;
-use pocketmine\level\Position;
+use pocketmine\world\particle\FloatingTextParticle;
+use pocketmine\world\Position;
 use onebone\economyapi\EconomyAPI;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
 
@@ -241,7 +241,7 @@ class Main extends PluginBase implements Listener {
                     $this->topAfkPosition['z'],
                     $world
                 ), $this->getTopAfkTimesText());
-                $world->addParticle($particle);
+                $world->addParticle($particle->asVector3(), $particle);
             }
         }
     }
