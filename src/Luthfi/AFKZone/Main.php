@@ -12,8 +12,8 @@ use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\world\World;
-use pocketmine\world\particle\FloatingTextParticle;
-use pocketmine\math\Vector3;
+use pocketmine\level\particle\FloatingTextParticle;
+use pocketmine\level\Position;
 use onebone\economyapi\EconomyAPI;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
 
@@ -21,15 +21,16 @@ class Main extends PluginBase implements Listener {
 
     private $afkZone;
     private $playersInZone = [];
+    private $afkTimes = [];
     private $economyPlugin;
     private $bedrockEconomyAPI;
-    private $leaderboardPosition;
+    private $topAfkPosition;
 
     public function onEnable(): void {
         $this->saveDefaultConfig();
         $this->afkZone = $this->getConfig()->get("afk-zone", []);
-        $this->leaderboardPosition = $this->getConfig()->get("leaderboard-position", []);
-        
+        $this->topAfkPosition = $this->getConfig()->get("top-afk-position", null);
+
         $economy = $this->getConfig()->get("economy-plugin", "EconomyAPI");
         if ($economy === "BedrockEconomy") {
             $bedrockEconomy = $this->getServer()->getPluginManager()->getPlugin("BedrockEconomy");
@@ -58,15 +59,14 @@ class Main extends PluginBase implements Listener {
         }), 20);
 
         $this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function (): void {
-            $this->updateLeaderboard();
-        }), 20 * 60);
+            $this->updateTopAfkLeaderboard();
+        }), 600);
 
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
     }
 
     public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
         if ($command->getName() === "afkzone") {
-
             if (!$sender instanceof Player) {
                 $sender->sendMessage("This command can only be used in-game.");
                 return true;
@@ -99,7 +99,9 @@ class Main extends PluginBase implements Listener {
             }
 
             return true;
-        } elseif ($command->getName() === "settopafk") {
+        }
+
+        if ($command->getName() === "settopafk") {
             if (!$sender instanceof Player) {
                 $sender->sendMessage("This command can only be used in-game.");
                 return true;
@@ -110,7 +112,17 @@ class Main extends PluginBase implements Listener {
                 return true;
             }
 
-            $this->setLeaderboardPosition($sender);
+            $this->setTopAfkPosition($sender);
+            return true;
+        }
+
+        if ($command->getName() === "topafk") {
+            if (!$sender->hasPermission("afkzone.topafk")) {
+                $sender->sendMessage("You do not have permission to use this command.");
+                return true;
+            }
+
+            $this->sendTopAfkTimes($sender);
             return true;
         }
 
@@ -154,20 +166,20 @@ class Main extends PluginBase implements Listener {
         $this->getConfig()->save();
     }
 
-    private function setLeaderboardPosition(Player $player): void {
+    private function setTopAfkPosition(Player $player): void {
         $x = $player->getPosition()->getX();
         $y = $player->getPosition()->getY();
         $z = $player->getPosition()->getZ();
         $world = $player->getWorld()->getFolderName();
 
-        $this->leaderboardPosition = [
+        $this->topAfkPosition = [
             'x' => $x,
             'y' => $y,
             'z' => $z,
             'world' => $world
         ];
 
-        $this->getConfig()->set("leaderboard-position", $this->leaderboardPosition);
+        $this->getConfig()->set("top-afk-position", $this->topAfkPosition);
         $this->getConfig()->save();
 
         $player->sendMessage("Top AFK leaderboard position set to X: $x, Y: $y, Z: $z in world $world");
@@ -181,6 +193,7 @@ class Main extends PluginBase implements Listener {
                 }
             } else {
                 if (isset($this->playersInZone[$player->getName()])) {
+                    $this->updateAfkTime($player->getName(), time() - $this->playersInZone[$player->getName()]);
                     unset($this->playersInZone[$player->getName()]);
                     $player->sendTitle("", "");
                 }
@@ -204,63 +217,53 @@ class Main extends PluginBase implements Listener {
         );
     }
 
-    private function grantMoney(Player $player): void {
-        $amount = $this->getConfig()->get("reward-amount", 1000);
-        if ($this->economyPlugin === "BedrockEconomy") {
-            if ($this->bedrockEconomyAPI !== null) {
-                $this->bedrockEconomyAPI->addToPlayerBalance($player->getName(), $amount, function (bool $success) use ($player, $amount): void {
-                    if ($success) {
-                        $player->sendMessage("You have received $amount for being in the AFK zone!");
-                    } else {
-                        $player->sendMessage("Failed to add money to your account.");
-                    }
-                });
-            }
-        } else {
-            EconomyAPI::getInstance()->addMoney($player, $amount);
-            $player->sendMessage("You have received $amount for being in the AFK zone!");
+    private function updateAfkTime(string $playerName, int $time): void {
+        if (!isset($this->afkTimes[$playerName])) {
+            $this->afkTimes[$playerName] = 0;
         }
+        $this->afkTimes[$playerName] += $time;
     }
 
     private function updatePlayerTimes(): void {
-        foreach ($this->playersInZone as $name => $enterTime) {
-            $player = $this->getServer()->getPlayerExact($name);
-            if ($player instanceof Player) {
-                $timeInZone = time() - $enterTime;
-                $hours = floor($timeInZone / 3600);
-                $minutes = floor(($timeInZone % 3600) / 60);
-                $seconds = $timeInZone % 60;
-                $player->sendTitle("AFK §eZone", "§7Time: {$hours}h {$minutes}m {$seconds}s", 0, 20, 0);
+        foreach ($this->playersInZone as $playerName => $startTime) {
+            $this->updateAfkTime($playerName, time() - $startTime);
+            $this->playersInZone[$playerName] = time();
+        }
+    }
 
-                if ($timeInZone > 0 && $timeInZone % 60 === 0) {
-                    $this->grantMoney($player);
-                }
+    private function updateTopAfkLeaderboard(): void {
+        if ($this->topAfkPosition !== null) {
+            $world = $this->getServer()->getWorldManager()->getWorldByName($this->topAfkPosition['world']);
+            if ($world !== null) {
+                $particle = new FloatingTextParticle(new Position(
+                    $this->topAfkPosition['x'],
+                    $this->topAfkPosition['y'],
+                    $this->topAfkPosition['z'],
+                    $world
+                ), $this->getTopAfkTimesText());
+                $world->addParticle($particle);
             }
         }
     }
 
-    private function updateLeaderboard(): void {
-        if (!empty($this->leaderboardPosition)) {
-            arsort($this->playersInZone);
-            $topPlayers = array_slice($this->playersInZone, 0, 10, true);
-            $leaderboardText = "§eTop AFK Players:\n";
+    private function getTopAfkTimesText(): string {
+        arsort($this->afkTimes);
+        $text = "Top AFK:\n";
+        $rank = 1;
+        foreach (array_slice($this->afkTimes, 0, 10, true) as $playerName => $time) {
+            $text .= "$rank. $playerName: " . gmdate("H:i:s", $time) . "\n";
+            $rank++;
+        }
+        return $text;
+    }
 
-            $rank = 1;
-            foreach ($topPlayers as $playerName => $time) {
-                $leaderboardText .= "§6#{$rank} §f{$playerName} §7- §a" . gmdate("H:i:s", time() - $time) . "\n";
-                $rank++;
-            }
-
-            $world = $this->getServer()->getWorldManager()->getWorldByName($this->leaderboardPosition['world']);
-            if ($world instanceof World) {
-                $position = new Vector3(
-                    $this->leaderboardPosition['x'],
-                    $this->leaderboardPosition['y'],
-                    $this->leaderboardPosition['z']
-                );
-                $particle = new FloatingTextParticle("", $leaderboardText);
-                $world->addParticle($position, $particle);
-            }
+    private function sendTopAfkTimes(CommandSender $sender): void {
+        arsort($this->afkTimes);
+        $sender->sendMessage("Top AFK:");
+        $rank = 1;
+        foreach (array_slice($this->afkTimes, 0, 10, true) as $playerName => $time) {
+            $sender->sendMessage("$rank. $playerName: " . gmdate("H:i:s", $time));
+            $rank++;
         }
     }
 }
