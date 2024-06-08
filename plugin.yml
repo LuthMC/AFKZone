@@ -12,6 +12,9 @@ commands:
   settopafk:
     description: Allow to set leaderboard
     permission: afkzone.settopafk
+  topafk:
+    description: Allow player to see top afk
+    permission: afkzone.topafk
 permissions:
   afkzone.command:
     description: Allows the player to configure the AFKZone
@@ -19,3 +22,6 @@ permissions:
   afkzone.settopafk:
     description: Allows the player to configure the AFKZone Leaderboard
     default: op
+  afkzone.topafk:
+    description: Allows the player see top afk
+    default: true
