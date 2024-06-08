@@ -218,18 +218,35 @@ class Main extends PluginBase implements Listener {
         );
     }
 
-    private function updateAfkTime(string $playerName, int $time): void {
-        if (!isset($this->afkTimes[$playerName])) {
-            $this->afkTimes[$playerName] = 0;
-        }
-        $this->afkTimes[$playerName] += $time;
-    }
+    private function grantMoney(Player $player): void {
+        $amount = $this->getConfig()->get("reward-amount", 1000);
+        if ($this->economyPlugin === "BedrockEconomy") {
+            if ($this->bedrockEconomyAPI !== null) {
+                $this->bedrockEconomyAPI->addToPlayerBalance($player->getName(), $amount, function (bool $success) use ($player, $amount): void {
+                    if ($success) {
+                        $player->sendMessage("You have received $amount for being in the AFK zone!");
+                    } else {
+                        $player->sendMessage("Failed to add money to your account.");
+                    }
+                });
+            }
+        } else {
+            EconomyAPI::getInstance()->addMoney($player, $amount);
+            $player->sendMessage("You have received $amount for being in the AFK zone!");
 
     private function updatePlayerTimes(): void {
-        foreach ($this->playersInZone as $playerName => $startTime) {
-            $this->updateAfkTime($playerName, time() - $startTime);
-            $this->playersInZone[$playerName] = time();
-        }
+        foreach ($this->playersInZone as $name => $enterTime) {
+            $player = $this->getServer()->getPlayerExact($name);
+            if ($player instanceof Player) {
+                $timeInZone = time() - $enterTime;
+                $hours = floor($timeInZone / 3600);
+                $minutes = floor(($timeInZone % 3600) / 60);
+                $seconds = $timeInZone % 60;
+                $player->sendTitle("AFK §eZone", "§7Time: {$hours}h {$minutes}m {$seconds}s", 0, 20, 0);
+
+                if ($timeInZone > 0 && $timeInZone % 60 === 0) {
+                    $this->grantMoney($player);
+                }
     }
 
     private function updateTopAfkLeaderboard(): void {
