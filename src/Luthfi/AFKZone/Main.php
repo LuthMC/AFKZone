@@ -17,6 +17,8 @@ use pocketmine\world\Position;
 use pocketmine\math\Vector3;
 use Luthfi\AFKZone\ScoreHudListener;
 use onebone\economyapi\EconomyAPI;
+use Ifera\ScoreHud\ScoreHud;
+use Ifera\ScoreHud\lib\scoreboard\ScoreTag;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
 
 class Main extends PluginBase implements Listener {
@@ -27,6 +29,7 @@ class Main extends PluginBase implements Listener {
     private $economyPlugin;
     private $bedrockEconomyAPI;
     private $topAfkPosition;
+    private $scoreHudListener;
 
     public function onEnable(): void {
         $this->saveDefaultConfig();
@@ -201,8 +204,6 @@ class Main extends PluginBase implements Listener {
                 $this->afkTimes[$player->getName()] = ($this->afkTimes[$player->getName()] ?? 0) + $timeInZone;
                 unset($this->playersInZone[$player->getName()]);
                 $player->sendTitle("", "");
-                
-                ScoreHud::getInstance()->getTagManager()->resetTag($player, new ScoreTag("afkzone.time", $afkTime));
             }
         }
     }
@@ -255,6 +256,9 @@ class Main extends PluginBase implements Listener {
             if ($timeInZone > 0 && $timeInZone % 60 === 0) {
                 $this->grantMoney($player);
             }
+
+            $afkTime = "{$hours}h {$minutes}m {$seconds}s";
+            ScoreHud::getInstance()->getTagManager()->resetTag($player, new ScoreTag("afkzone.time", $afkTime));
         }
     }
 }
