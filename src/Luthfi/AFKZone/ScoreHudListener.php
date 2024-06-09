@@ -8,7 +8,6 @@ use Ifera\ScoreHud\event\TagsResolveEvent;
 use Ifera\ScoreHud\ScoreHud;
 use Ifera\ScoreHud\lib\scoreboard\ScoreTag;
 use pocketmine\event\Listener;
-use pocketmine\event\EventPriority;
 use pocketmine\event\HandlerList;
 use pocketmine\player\Player;
 use pocketmine\plugin\PluginBase;
