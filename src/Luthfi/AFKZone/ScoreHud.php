@@ -7,7 +7,6 @@ namespace Luthfi\AFKZone;
 use Ifera\ScoreHud\event\TagResolveEvent;
 use Ifera\ScoreHud\scoreboard\ScoreTag;
 use pocketmine\event\Listener;
-use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\plugin\PluginBase;
 use pocketmine\player\Player;
 
@@ -33,12 +32,6 @@ class ScoreHud implements Listener {
         }
     }
 
-    /**
-     * Get the AFK time of the player in a formatted string.
-     *
-     * @param Player $player
-     * @return string
-     */
     private function getAfkTime(Player $player): string {
         $name = $player->getName();
         $time = $this->plugin->afkTimes[$name] ?? 0;
