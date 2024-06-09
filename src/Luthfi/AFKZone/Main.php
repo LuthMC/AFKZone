@@ -15,7 +15,7 @@ use pocketmine\world\World;
 use pocketmine\world\particle\FloatingTextParticle;
 use pocketmine\world\Position;
 use pocketmine\math\Vector3;
-use Luthfi\AFKZone\ScoreHudListener
+use Luthfi\AFKZone\ScoreHudListener;
 use onebone\economyapi\EconomyAPI;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
 
