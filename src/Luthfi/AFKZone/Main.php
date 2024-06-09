@@ -64,6 +64,8 @@ class Main extends PluginBase implements Listener {
         }), 600);
 
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
+
+        new ScoreHud($this);
     }
 
     public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
