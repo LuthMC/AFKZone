@@ -15,6 +15,7 @@ use pocketmine\world\World;
 use pocketmine\world\particle\FloatingTextParticle;
 use pocketmine\world\Position;
 use pocketmine\math\Vector3;
+use Luthfi\AFKZone\ScoreHudListener
 use onebone\economyapi\EconomyAPI;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
 
@@ -65,7 +66,7 @@ class Main extends PluginBase implements Listener {
 
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
 
-        new ScoreHud($this);
+        $this->scoreHudListener = new ScoreHudListener($this);
     }
 
     public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
@@ -200,6 +201,8 @@ class Main extends PluginBase implements Listener {
                 $this->afkTimes[$player->getName()] = ($this->afkTimes[$player->getName()] ?? 0) + $timeInZone;
                 unset($this->playersInZone[$player->getName()]);
                 $player->sendTitle("", "");
+                
+                ScoreHud::getInstance()->getTagManager()->resetTag($player, new ScoreTag("afkzone.time", $afkTime));
             }
         }
     }
