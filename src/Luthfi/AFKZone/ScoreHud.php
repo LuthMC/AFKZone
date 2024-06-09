@@ -7,8 +7,8 @@ namespace Luthfi\AFKZone;
 use Ifera\ScoreHud\event\TagResolveEvent;
 use Ifera\ScoreHud\scoreboard\ScoreTag;
 use pocketmine\event\Listener;
-use pocketmine\event\EventPriority;
-use pocketmine\event\EventHandler;
+use pocketmine\event\player\PlayerJoinEvent;
+use pocketmine\plugin\PluginBase;
 use pocketmine\player\Player;
 
 class ScoreHud implements Listener {
@@ -21,8 +21,8 @@ class ScoreHud implements Listener {
     }
 
     /**
-     * @EventHandler(priority = EventPriority::HIGH, handleCancelled = true)
      * @param TagResolveEvent $event
+     * @priority HIGHEST
      */
     public function onTagResolve(TagResolveEvent $event): void {
         $tag = $event->getTag();
@@ -34,6 +34,8 @@ class ScoreHud implements Listener {
     }
 
     /**
+     * Get the AFK time of the player in a formatted string.
+     *
      * @param Player $player
      * @return string
      */
