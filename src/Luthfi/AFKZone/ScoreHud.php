@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Luthfi\AFKZone;
 
 use Ifera\ScoreHud\event\TagResolveEvent;
+use Ifera\ScoreHud\scoreboard\ScoreTag;
 use pocketmine\event\Listener;
+use pocketmine\event\EventPriority;
+use pocketmine\event\EventHandler;
 use pocketmine\player\Player;
 
 class ScoreHud implements Listener {
@@ -18,6 +21,7 @@ class ScoreHud implements Listener {
     }
 
     /**
+     * @EventHandler(priority = EventPriority::HIGH, handleCancelled = true)
      * @param TagResolveEvent $event
      */
     public function onTagResolve(TagResolveEvent $event): void {
