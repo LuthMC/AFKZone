@@ -15,10 +15,10 @@ use pocketmine\world\World;
 use pocketmine\world\particle\FloatingTextParticle;
 use pocketmine\world\Position;
 use pocketmine\math\Vector3;
-use Luthfi\AFKZone\ScoreHudListener;
-use onebone\economyapi\EconomyAPI;
+use Ifera\ScoreHud\event\TagsResolveEvent;
 use Ifera\ScoreHud\ScoreHud;
 use Ifera\ScoreHud\lib\scoreboard\ScoreTag;
+use onebone\economyapi\EconomyAPI;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
 
 class Main extends PluginBase implements Listener {
@@ -29,7 +29,6 @@ class Main extends PluginBase implements Listener {
     private $economyPlugin;
     private $bedrockEconomyAPI;
     private $topAfkPosition;
-    private $scoreHudListener;
 
     public function onEnable(): void {
         $this->saveDefaultConfig();
@@ -69,7 +68,7 @@ class Main extends PluginBase implements Listener {
 
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
 
-        $this->scoreHudListener = new ScoreHudListener($this);
+        new ScoreHudListener($this);
     }
 
     public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
@@ -193,113 +192,126 @@ class Main extends PluginBase implements Listener {
     }
 
     public function checkAfkZone(): void {
-    foreach ($this->getServer()->getOnlinePlayers() as $player) {
-        if ($this->isInAfkZone($player)) {
-            if (!isset($this->playersInZone[$player->getName()])) {
-                $this->playersInZone[$player->getName()] = time();
-            }
-        } else {
-            if (isset($this->playersInZone[$player->getName()])) {
-                $timeInZone = time() - $this->playersInZone[$player->getName()];
-                $this->afkTimes[$player->getName()] = ($this->afkTimes[$player->getName()] ?? 0) + $timeInZone;
-                unset($this->playersInZone[$player->getName()]);
-                $player->sendTitle("", "");
+        foreach ($this->getServer()->getOnlinePlayers() as $player) {
+            $name = $player->getName();
+
+            if ($this->isInAfkZone($player)) {
+                if (!isset($this->playersInZone[$name])) {
+                    $this->playersInZone[$name] = time();
+                    $this->afkTimes[$name] = $this->afkTimes[$name] ?? 0;
+                }
+            } else {
+                if (isset($this->playersInZone[$name])) {
+                    $timeInZone = time() - $this->playersInZone[$name];
+                    $this->afkTimes[$name] += $timeInZone;
+                    unset($this->playersInZone[$name]);
+                }
             }
         }
     }
-}
 
     private function isInAfkZone(Player $player): bool {
-        $pos = $player->getPosition();
-        $worldName = $player->getWorld()->getFolderName();
-        if (!isset($this->afkZone['world']) || $this->afkZone['world'] !== $worldName) {
+        if (empty($this->afkZone['world']) || !isset($this->afkZone['x1']) || !isset($this->afkZone['x2'])) {
             return false;
         }
+
+        $world = $player->getWorld()->getFolderName();
+        if ($world !== $this->afkZone['world']) {
+            return false;
+        }
+
+        $x = $player->getPosition()->getX();
+        $y = $player->getPosition()->getY();
+        $z = $player->getPosition()->getZ();
+
         return (
-            $pos->getX() >= min($this->afkZone['x1'], $this->afkZone['x2']) &&
-            $pos->getX() <= max($this->afkZone['x1'], $this->afkZone['x2']) &&
-            $pos->getY() >= min($this->afkZone['y1'], $this->afkZone['y2']) &&
-            $pos->getY() <= max($this->afkZone['y1'], $this->afkZone['y2']) &&
-            $pos->getZ() >= min($this->afkZone['z1'], $this->afkZone['z2']) &&
-            $pos->getZ() <= max($this->afkZone['z1'], $this->afkZone['z2'])
+            $x >= min($this->afkZone['x1'], $this->afkZone['x2']) &&
+            $x <= max($this->afkZone['x1'], $this->afkZone['x2']) &&
+            $y >= min($this->afkZone['y1'], $this->afkZone['y2']) &&
+            $y <= max($this->afkZone['y1'], $this->afkZone['y2']) &&
+            $z >= min($this->afkZone['z1'], $this->afkZone['z2']) &&
+            $z <= max($this->afkZone['z1'], $this->afkZone['z2'])
         );
     }
 
+    private function updatePlayerTimes(): void {
+        foreach ($this->playersInZone as $name => $enterTime) {
+            $player = $this->getServer()->getPlayerExact($name);
+            if ($player instanceof Player) {
+                $timeInZone = time() - $enterTime;
+                $hours = floor($timeInZone / 3600);
+                $minutes = floor(($timeInZone % 3600) / 60);
+                $seconds = $timeInZone % 60;
+                $player->sendTitle("AFK §eZone", "§7Time: {$hours}h {$minutes}m {$seconds}s", 0, 20, 0);
+
+                if ($timeInZone > 0 && $timeInZone % 60 === 0) {
+                    $this->grantMoney($player);
+                }
+
+                $afkTime = "{$hours}h {$minutes}m {$seconds}s";
+                ScoreHud::getInstance()->getTagManager()->resetTag($player, new ScoreTag("afkzone.time", $afkTime));
+            }
+        }
+    }
+
     private function grantMoney(Player $player): void {
-        $amount = $this->getConfig()->get("reward-amount", 1000);
+        $amount = $this->getConfig()->get("reward-amount", 10);
+
         if ($this->economyPlugin === "BedrockEconomy") {
             if ($this->bedrockEconomyAPI !== null) {
                 $this->bedrockEconomyAPI->addToPlayerBalance($player->getName(), $amount, function (bool $success) use ($player, $amount): void {
                     if ($success) {
-                        $player->sendMessage("You have received $amount for being in the AFK zone!");
+                        $player->sendMessage("You've been awarded $amount for staying in the AFK zone!");
                     } else {
-                        $player->sendMessage("Failed to add money to your account.");
+                        $player->sendMessage("Failed to award $amount.");
                     }
                 });
             }
         } else {
-            EconomyAPI::getInstance()->addMoney($player, $amount);
-            $player->sendMessage("You have received $amount for being in the AFK zone!");
-        }
-    }
-
-    private function updatePlayerTimes(): void {
-    foreach ($this->playersInZone as $name => $enterTime) {
-        $player = $this->getServer()->getPlayerExact($name);
-        if ($player instanceof Player) {
-            $timeInZone = time() - $enterTime;
-            $hours = floor($timeInZone / 3600);
-            $minutes = floor(($timeInZone % 3600) / 60);
-            $seconds = $timeInZone % 60;
-            $player->sendTitle("AFK §eZone", "§7Time: {$hours}h {$minutes}m {$seconds}s", 0, 20, 0);
-
-            if ($timeInZone > 0 && $timeInZone % 60 === 0) {
-                $this->grantMoney($player);
+            $economyAPI = EconomyAPI::getInstance();
+            if ($economyAPI !== null) {
+                $economyAPI->addMoney($player, $amount);
+                $player->sendMessage("You've been awarded $amount for staying in the AFK zone!");
             }
-
-            $afkTime = "{$hours}h {$minutes}m {$seconds}s";
-            ScoreHud::getInstance()->getTagManager()->resetTag($player, new ScoreTag("afkzone.time", $afkTime));
         }
     }
-}
 
     private function updateTopAfkLeaderboard(): void {
-        if ($this->topAfkPosition !== null) {
-            $world = $this->getServer()->getWorldManager()->getWorldByName($this->topAfkPosition['world']);
-            if ($world !== null) {
-                $particle = new FloatingTextParticle(new Position(
-                    $this->topAfkPosition['x'],
-                    $this->topAfkPosition['y'],
-                    $this->topAfkPosition['z'],
-                    $world
-                ), $this->getTopAfkTimesText());
-                $world->addParticle(new Vector3(
-                   $this->topAfkPosition['x'],
-                   $this->topAfkPosition['y'],
-                   $this->topAfkPosition['z']
-                ), $particle);
-            }
+        if (!$this->topAfkPosition) {
+            return;
         }
+
+        $worldName = $this->topAfkPosition['world'];
+        $world = $this->getServer()->getWorldManager()->getWorldByName($worldName);
+
+        if (!$world instanceof World) {
+            return;
+        }
+
+        $x = $this->topAfkPosition['x'];
+        $y = $this->topAfkPosition['y'];
+        $z = $this->topAfkPosition['z'];
+
+        $leaderboard = $this->getTopAfkTimes();
+        $lines = ["§eTop AFK Times:"];
+        foreach ($leaderboard as $entry) {
+            $lines[] = "{$entry['name']}: {$entry['time']} seconds";
+        }
+
+        $text = implode("\n", $lines);
+        $position = new Position($x, $y, $z, $world);
+        $particle = new FloatingTextParticle("", $text);
+
+        $world->addParticle($position, $particle, $world->getPlayers());
     }
 
-    private function getTopAfkTimesText(): string {
+    private function getTopAfkTimes(): array {
         arsort($this->afkTimes);
-        $text = "Top AFK:\n";
-        $rank = 1;
-        foreach (array_slice($this->afkTimes, 0, 10, true) as $playerName => $time) {
-            $text .= "$rank. $playerName: " . gmdate("H:i:s", $time) . "\n";
-            $rank++;
+        $topTimes = array_slice($this->afkTimes, 0, 10, true);
+        $leaderboard = [];
+        foreach ($topTimes as $name => $time) {
+            $leaderboard[] = ['name' => $name, 'time' => $time];
         }
-        return $text;
-    }
-
-    private function sendTopAfkTimes(CommandSender $sender): void {
-        arsort($this->afkTimes);
-        $sender->sendMessage("Top AFK:");
-        $rank = 1;
-        foreach (array_slice($this->afkTimes, 0, 10, true) as $playerName => $time) {
-            $sender->sendMessage("$rank. $playerName: " . gmdate("H:i:s", $time));
-            $rank++;
-        }
+        return $leaderboard;
     }
 }
