@@ -314,4 +314,13 @@ class Main extends PluginBase implements Listener {
         }
         return $leaderboard;
     }
+
+    private function sendTopAfkTimes(CommandSender $sender): void {
+        $leaderboard = $this->getTopAfkTimes();
+        $lines = ["§eTop AFK Times:"];
+        foreach ($leaderboard as $entry) {
+            $lines[] = "{$entry['name']}: {$entry['time']} seconds";
+        }
+        $sender->sendMessage(implode("\n", $lines));
+    }
 }
