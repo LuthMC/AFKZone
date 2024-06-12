@@ -8,6 +8,7 @@ use Ifera\ScoreHud\event\TagsResolveEvent;
 use Ifera\ScoreHud\ScoreHud;
 use Ifera\ScoreHud\lib\scoreboard\ScoreTag;
 use pocketmine\event\Listener;
+use pocketmine\event\EventPriority;
 use pocketmine\player\Player;
 use pocketmine\plugin\PluginBase;
 
@@ -20,6 +21,9 @@ class ScoreHudListener implements Listener {
         $plugin->getServer()->getPluginManager()->registerEvents($this, $plugin);
     }
 
+    /**
+     * @priority HIGH
+     */
     public function onTagResolve(TagsResolveEvent $event): void {
         $player = $event->getPlayer();
         $name = $player->getName();
