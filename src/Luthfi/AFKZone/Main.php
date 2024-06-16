@@ -15,6 +15,11 @@ use pocketmine\world\particle\FloatingTextParticle;
 use pocketmine\math\Vector3;
 use pocketmine\world\World;
 use jojoe77777\FormAPI\SimpleForm;
+use Ifera\ScoreHud\event\TagsResolveEvent;
+use Ifera\ScoreHud\ScoreHud;
+use Ifera\ScoreHud\scoreboard\ScoreTag;
+use pocketmine\event\player\PlayerJoinEvent;
+use pocketmine\world\sound\NoteBlockSound;
 use onebone\economyapi\EconomyAPI;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
 
@@ -61,7 +66,32 @@ class Main extends PluginBase implements Listener {
         }), 20 * 60);
 
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
+        $this->getServer()->getPluginManager()->registerEvents(new class($this) implements Listener {
+    private $plugin;
+
+    public function __construct(Main $plugin) {
+        $this->plugin = $plugin;
     }
+
+    public function onJoin(PlayerJoinEvent $event): void {
+        $player = $event->getPlayer();
+        ScoreHud::getInstance()->setScoreTag(new ScoreTag($player, "afkzone.time", "0s"));
+    }
+
+    public function onTagsResolve(TagsResolveEvent $event): void {
+        $tag = $event->getTag();
+        $player = $event->getPlayer();
+        if ($tag->getName() === "afkzone.time") {
+            $timeInZone = $this->plugin->playersInZone[$player->getName()] ?? 0;
+            $hours = floor($timeInZone / 3600);
+            $minutes = floor(($timeInZone % 3600) / 60);
+            $seconds = $timeInZone % 60;
+            $timeString = sprintf("%dh %dm %ds", $hours, $minutes, $seconds);
+            $tag->setValue($timeString);
+            }
+        }
+    }, $this);
+}
 
     public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
     if ($command->getName() === "afkzone") {
@@ -197,20 +227,23 @@ class Main extends PluginBase implements Listener {
         $this->getConfig()->save();
 
         $player->sendMessage("Leaderboard position set to X: $x, Y: $y, Z: $z in world: $world");
+    }
+    
     public function checkAfkZone(): void {
-        foreach ($this->getServer()->getOnlinePlayers() as $player) {
-            if ($this->isInAfkZone($player)) {
-                if (!isset($this->playersInZone[$player->getName()])) {
-                    $this->playersInZone[$player->getName()] = time();
-                }
-            } else {
-                if (isset($this->playersInZone[$player->getName()])) {
-                    unset($this->playersInZone[$player->getName()]);
-                    $player->sendTitle("", "");
-                }
+    foreach ($this->getServer()->getOnlinePlayers() as $player) {
+        if ($this->isInAfkZone($player)) {
+            if (!isset($this->playersInZone[$player->getName()])) {
+                $this->playersInZone[$player->getName()] = time();
+            }
+        } else {
+            if (isset($this->playersInZone[$player->getName()])) {
+                unset($this->playersInZone[$player->getName()]);
+                $player->sendTitle("", "");
+                ScoreHud::getInstance()->setScoreTag(new ScoreTag($player, "afkzone.time", "0s"));
             }
         }
     }
+}
 
     private function isInAfkZone(Player $player): bool {
         $pos = $player->getPosition();
@@ -246,22 +279,24 @@ class Main extends PluginBase implements Listener {
         }
     }
 
-    private function updatePlayerTimes(): void {
-        foreach ($this->playersInZone as $name => $enterTime) {
-            $player = $this->getServer()->getPlayerExact($name);
-            if ($player instanceof Player) {
-                $timeInZone = time() - $enterTime;
-                $hours = floor($timeInZone / 3600);
-                $minutes = floor(($timeInZone % 3600) / 60);
-                $seconds = $timeInZone % 60;
-                $player->sendTitle("AFK §eZone", "§7Time: {$hours}h {$minutes}m {$seconds}s", 0, 20, 0);
+   private function updatePlayerTimes(): void {
+    foreach ($this->playersInZone as $name => $enterTime) {
+        $player = $this->getServer()->getPlayerExact($name);
+        if ($player instanceof Player) {
+            $timeInZone = time() - $enterTime;
+            $hours = floor($timeInZone / 3600);
+            $minutes = floor(($timeInZone % 3600) / 60);
+            $seconds = $timeInZone % 60;
+            $player->sendTitle("§fAFK§bZone", "§7Time: {$hours}h {$minutes}m {$seconds}s", 0, 20, 0);
 
-                if ($timeInZone > 0 && $timeInZone % 60 === 0) {
-                    $this->grantMoney($player);
-                }
+            ScoreHud::getInstance()->setScoreTag(new ScoreTag($player, "afkzone.time", "{$hours}h {$minutes}m {$seconds}s"));
+
+            if ($timeInZone > 0 && $timeInZone % 60 === 0) {
+                $this->grantMoney($player);
             }
         }
     }
+ }
 
    private function showAfkZoneForm(Player $player): void {
     $form = new SimpleForm(function (Player $player, ?int $data) {
@@ -298,12 +333,15 @@ class Main extends PluginBase implements Listener {
         }
     });
 
-    $form->setTitle("AFKZone Settings");
-    $form->addButton("Set AFKZone World");
-    $form->addButton("Set AFKZone Position 1");
-    $form->addButton("Set AFKZone Position 2");
-    $form->addButton("Set Leaderboard Position");
-    $form->addButton("Unset Leaderboard Position");
+    $form->setTitle("§l§fAFK§bZone §eSettings");
+    $form->setContent("§6Please choose an option:");
+       
+    $form->addButton("Set AFKZone World\n§7Click here", -1, "", 1);
+    $form->addButton("Set AFKZone Position 1\n§7Click here", -1, "", 2);
+    $form->addButton("Set AFKZone Position 2\n§7Click here", -1, "", 3);
+    $form->addButton("Set Leaderboard Position\n§7Click here", -1, "", 4);
+    $form->addButton("Unset Leaderboard Position\n§7Click here", -1, "", 5);
+       
     $player->sendForm($form);
  }   
 
