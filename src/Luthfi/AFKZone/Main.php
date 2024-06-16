@@ -11,9 +11,9 @@ use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\scheduler\ClosureTask;
-use pocketmine\world\World;
 use pocketmine\world\particle\FloatingTextParticle;
 use pocketmine\math\Vector3;
+use pocketmine\world\World;
 use onebone\economyapi\EconomyAPI;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
 
@@ -24,45 +24,44 @@ class Main extends PluginBase implements Listener {
     private $economyPlugin;
     private $bedrockEconomyAPI;
     private $leaderboardParticles = [];
-    
-    
-    public function onEnable(): void {
-    $this->saveDefaultConfig();
-    $this->afkZone = $this->getConfig()->get("afk-zone", []);
 
-    $economy = $this->getConfig()->get("economy-plugin", "EconomyAPI");
-    if ($economy === "BedrockEconomy") {
-        $bedrockEconomy = $this->getServer()->getPluginManager()->getPlugin("BedrockEconomy");
-        if ($bedrockEconomy !== null && $bedrockEconomy->isEnabled()) {
-            $this->economyPlugin = "BedrockEconomy";
-            if (class_exists(BedrockEconomyAPI::class)) {
-                $this->bedrockEconomyAPI = BedrockEconomyAPI::getInstance();
+    public function onEnable(): void {
+        $this->saveDefaultConfig();
+        $this->afkZone = $this->getConfig()->get("afk-zone", []);
+
+        $economy = $this->getConfig()->get("economy-plugin", "EconomyAPI");
+        if ($economy === "BedrockEconomy") {
+            $bedrockEconomy = $this->getServer()->getPluginManager()->getPlugin("BedrockEconomy");
+            if ($bedrockEconomy !== null && $bedrockEconomy->isEnabled()) {
+                $this->economyPlugin = "BedrockEconomy";
+                if (class_exists(BedrockEconomyAPI::class)) {
+                    $this->bedrockEconomyAPI = BedrockEconomyAPI::getInstance();
+                } else {
+                    $this->getLogger()->error("BedrockEconomyAPI class not found!");
+                    $this->economyPlugin = "EconomyAPI";
+                }
             } else {
-                $this->getLogger()->error("BedrockEconomyAPI class not found!");
+                $this->getLogger()->error("BedrockEconomy plugin not found or not enabled! Defaulting to EconomyAPI.");
                 $this->economyPlugin = "EconomyAPI";
             }
         } else {
-            $this->getLogger()->error("BedrockEconomy plugin not found or not enabled! Defaulting to EconomyAPI.");
             $this->economyPlugin = "EconomyAPI";
         }
-    } else {
-        $this->economyPlugin = "EconomyAPI";
+
+        $this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function (): void {
+            $this->checkAfkZone();
+        }), 20);
+
+        $this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function (): void {
+            $this->updatePlayerTimes();
+            $this->updateLeaderboard();
+        }), 20 * 60);
+
+        $this->getServer()->getPluginManager()->registerEvents($this, $this);
     }
-
-    $this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function (): void {
-        $this->checkAfkZone();
-    }), 20);
-
-    $this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function (): void {
-        $this->updatePlayerTimes();
-    }), 20 * 60);
-
-    $this->getServer()->getPluginManager()->registerEvents($this, $this);
-        }
 
     public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
         if ($command->getName() === "afkzone") {
-
             if (!$sender instanceof Player) {
                 $sender->sendMessage("This command can only be used in-game.");
                 return true;
@@ -94,6 +93,19 @@ class Main extends PluginBase implements Listener {
                     return true;
             }
 
+            return true;
+        } elseif ($command->getName() === "settopafk") {
+            if (!$sender instanceof Player) {
+                $sender->sendMessage("This command can only be used in-game.");
+                return true;
+            }
+
+            if (!$sender->hasPermission("afkzone.settopafk")) {
+                $sender->sendMessage("You do not have permission to use this command.");
+                return true;
+            }
+
+            $this->setTopAfkPosition($sender);
             return true;
         }
 
@@ -137,6 +149,21 @@ class Main extends PluginBase implements Listener {
         $this->getConfig()->save();
     }
 
+    private function setTopAfkPosition(Player $player): void {
+        $x = $player->getPosition()->getX();
+        $y = $player->getPosition()->getY();
+        $z = $player->getPosition()->getZ();
+        $world = $player->getWorld()->getFolderName();
+
+        $this->getConfig()->set("leaderboard.position.x", $x);
+        $this->getConfig()->set("leaderboard.position.y", $y);
+        $this->getConfig()->set("leaderboard.position.z", $z);
+        $this->getConfig()->set("leaderboard.position.world", $world);
+        $this->getConfig()->save();
+
+        $player->sendMessage("Leaderboard position set to X: $x, Y: $y, Z: $z in world: $world");
+    }
+
     public function checkAfkZone(): void {
         foreach ($this->getServer()->getOnlinePlayers() as $player) {
             if ($this->isInAfkZone($player)) {
@@ -166,32 +193,6 @@ class Main extends PluginBase implements Listener {
             $pos->getZ() >= min($this->afkZone['z1'], $this->afkZone['z2']) &&
             $pos->getZ() <= max($this->afkZone['z1'], $this->afkZone['z2'])
         );
-    }
-
-    private function updateLeaderboard(): void {
-    arsort($this->playersInZone);
-    $topPlayers = array_slice($this->playersInZone, 0, 5, true);
-
-    foreach ($this->leaderboardParticles as $particle) {
-        $particle->getWorld()->addParticle($particle->getPosition(), new FloatingTextParticle("", ""));
-    }
-    $this->leaderboardParticles = [];
-
-    $world = $this->getServer()->getWorldManager()->getDefaultWorld();
-    $basePosition = new Vector3(100, 65, 100);
-
-    $index = 0;
-    foreach ($topPlayers as $name => $time) {
-        $timeText = gmdate("H:i:s", $time);
-        $text = "§e{$name}: §7{$timeText}";
-
-        $position = $basePosition->add(0, $index * 1.5, 0);
-        $particle = new FloatingTextParticle($text);
-        $world->addParticle($position, $particle);
-
-        $this->leaderboardParticles[] = $particle;
-        $index++;
-       }
     }
 
     private function grantMoney(Player $player): void {
@@ -226,6 +227,47 @@ class Main extends PluginBase implements Listener {
                     $this->grantMoney($player);
                 }
             }
+        }
+    }
+
+    private function updateLeaderboard(): void {
+        arsort($this->playersInZone);
+        $topPlayers = array_slice($this->playersInZone, 0, 5, true);
+
+        foreach ($this->leaderboardParticles as $particle) {
+            $particle->getWorld()->addParticle($particle->getPosition(), new FloatingTextParticle("", ""));
+        }
+        $this->leaderboardParticles = [];
+
+        $config = $this->getConfig();
+        if (!$config->exists("leaderboard.position.world")) {
+            $this->getLogger()->warning("Leaderboard position is not set.");
+            return;
+        }
+
+        $worldName = $config->get("leaderboard.position.world");
+        $world = $this->getServer()->getWorldManager()->getWorldByName($worldName);
+        if ($world === null) {
+            $this->getLogger()->warning("World '$worldName' not found.");
+            return;
+        }
+
+        $x = $config->get("leaderboard.position.x");
+        $y = $config->get("leaderboard.position.y");
+        $z = $config->get("leaderboard.position.z");
+        $basePosition = new Vector3($x, $y, $z);
+
+        $index = 0;
+        foreach ($topPlayers as $name => $time) {
+            $timeText = gmdate("H:i:s", $time);
+            $text = "§e{$name}: §7{$timeText}";
+
+            $position = $basePosition->add(0, $index * 1.5, 0);
+            $particle = new FloatingTextParticle($text);
+            $world->addParticle($position, $particle);
+
+            $this->leaderboardParticles[] = $particle;
+            $index++;
         }
     }
 }
