@@ -25,8 +25,10 @@ class Main extends PluginBase implements Listener {
     private $economyPlugin;
     private $bedrockEconomyAPI;
     private $leaderboardParticles = [];
+    private $messages = [];
 
     public function onEnable(): void {
+        $this->loadLanguage();
         $this->saveDefaultConfig();
         $this->afkZone = $this->getConfig()->get("afk-zone", []);
 
@@ -118,58 +120,63 @@ class Main extends PluginBase implements Listener {
 
     return false;
  }
+
+    private function loadLanguage(): void {
+    $language = $this->getConfig()->get("Language", "English");
+    $languageFile = $this->getDataFolder() . "Language/" . $language . ".yml";
+    
+    if (!file_exists($languageFile)) {
+        $this->getLogger()->error("Language file for '$language' not found, defaulting to English.");
+        $languageFile = $this->getDataFolder() . "Language/English.yml";
+    }
+    
+    $this->messages = yaml_parse_file($languageFile)["messages"];
+ }
+
+    private function translate(string $key, array $params = []): string {
+    $message = $this->messages[$key] ?? $key;
+    foreach ($params as $key => $value) {
+        $message = str_replace("{" . $key . "}", $value, $message);
+    }
+    return $message;
+}
     
     private function setAfkZoneWorld(Player $player): void {
-        $worldName = $player->getWorld()->getFolderName();
-        $this->afkZone['world'] = $worldName;
-        $this->getConfig()->set("afk-zone.world", $worldName);
-        $this->getConfig()->save();
-        $player->sendMessage("AFK zone world set to " . $worldName);
-    }
+    $worldName = $player->getWorld()->getFolderName();
+    $this->afkZone['world'] = $worldName;
+    $this->getConfig()->set("afk-zone.world", $worldName);
+    $this->getConfig()->save();
+    $player->sendMessage($this->translate("world_set", ["world" => $worldName]));
+}
 
     private function setAfkZonePosition(Player $player, string $position): void {
-        $x = $player->getPosition()->getX();
-        $y = $player->getPosition()->getY();
-        $z = $player->getPosition()->getZ();
+    $x = $player->getPosition()->getX();
+    $y = $player->getPosition()->getY();
+    $z = $player->getPosition()->getZ();
 
-        if ($position === "1") {
-            $this->afkZone['x1'] = $x;
-            $this->afkZone['y1'] = $y;
-            $this->afkZone['z1'] = $z;
-            $this->getConfig()->set("afk-zone.x1", $x);
-            $this->getConfig()->set("afk-zone.y1", $y);
-            $this->getConfig()->set("afk-zone.z1", $z);
-            $player->sendMessage("AFK zone position 1 set to X: $x, Y: $y, Z: $z");
-        } elseif ($position === "2") {
-            $this->afkZone['x2'] = $x;
-            $this->afkZone['y2'] = $y;
-            $this->afkZone['z2'] = $z;
-            $this->getConfig()->set("afk-zone.x2", $x);
-            $this->getConfig()->set("afk-zone.y2", $y);
-            $this->getConfig()->set("afk-zone.z2", $z);
-            $player->sendMessage("AFK zone position 2 set to X: $x, Y: $y, Z: $z");
-        } else {
-            $player->sendMessage("Invalid position. Use 1 or 2.");
-            return;
-        }
-
-        $this->getConfig()->save();
+    if ($position === "1") {
+        $this->afkZone['x1'] = $x;
+        $this->afkZone['y1'] = $y;
+        $this->afkZone['z1'] = $z;
+        $this->getConfig()->set("afk-zone.x1", $x);
+        $this->getConfig()->set("afk-zone.y1", $y);
+        $this->getConfig()->set("afk-zone.z1", $z);
+        $player->sendMessage($this->translate("set_position_1", ["x" => $x, "y" => $y, "z" => $z]));
+    } elseif ($position === "2") {
+        $this->afkZone['x2'] = $x;
+        $this->afkZone['y2'] = $y;
+        $this->afkZone['z2'] = $z;
+        $this->getConfig()->set("afk-zone.x2", $x);
+        $this->getConfig()->set("afk-zone.y2", $y);
+        $this->getConfig()->set("afk-zone.z2", $z);
+        $player->sendMessage($this->translate("set_position_2", ["x" => $x, "y" => $y, "z" => $z]));
+    } else {
+        $player->sendMessage($this->translate("invalid_position"));
+        return;
     }
 
-    private function setTopAfkPosition(Player $player): void {
-        $x = $player->getPosition()->getX();
-        $y = $player->getPosition()->getY();
-        $z = $player->getPosition()->getZ();
-        $world = $player->getWorld()->getFolderName();
-
-        $this->getConfig()->set("leaderboard.position.x", $x);
-        $this->getConfig()->set("leaderboard.position.y", $y);
-        $this->getConfig()->set("leaderboard.position.z", $z);
-        $this->getConfig()->set("leaderboard.position.world", $world);
-        $this->getConfig()->save();
-
-        $player->sendMessage("Leaderboard position set to X: $x, Y: $y, Z: $z in world: $world");
-    }
+    $this->getConfig()->save();
+}
 
     public function checkAfkZone(): void {
         foreach ($this->getServer()->getOnlinePlayers() as $player) {
@@ -287,11 +294,11 @@ class Main extends PluginBase implements Listener {
         $config->remove("leaderboard.position.y");
         $config->remove("leaderboard.position.z");
         $config->save();
-        $player->sendMessage("AFK leaderboard position has been unset.");
+        $player->sendMessage($this->translate("leaderboard_unset"));
     } else {
-        $player->sendMessage("AFK leaderboard position is not set.");
+        $player->sendMessage($this->translate("leaderboard_not_set"));
     }
- }
+}
     
     private function updateLeaderboard(): void {
         arsort($this->playersInZone);
