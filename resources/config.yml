@@ -8,3 +8,5 @@ afk-zone:
   z2: 0
 reward-amount: 1000
 economy-plugin: "BedrockEconomy" # EconomyAPI or BedrockEconomy
+
+Language: English
