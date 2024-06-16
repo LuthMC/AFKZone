@@ -44,7 +44,6 @@ class Main extends PluginBase implements Listener {
     private $economyPlugin;
     private $bedrockEconomyAPI;
     private $leaderboardParticles = [];
-    private $messages = [];
     protected const DATAFOLDER_NAME = "Language";
 
     public const LANGUAGES = [
