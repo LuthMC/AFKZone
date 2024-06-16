@@ -12,6 +12,8 @@ use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\world\World;
+use pocketmine\world\particle\FloatingTextParticle;
+use pocketmine\math\Vector3;
 use onebone\economyapi\EconomyAPI;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
 
@@ -21,6 +23,8 @@ class Main extends PluginBase implements Listener {
     private $playersInZone = [];
     private $economyPlugin;
     private $bedrockEconomyAPI;
+    private $leaderboardParticles = [];
+    
     
     public function onEnable(): void {
     $this->saveDefaultConfig();
@@ -51,7 +55,7 @@ class Main extends PluginBase implements Listener {
 
     $this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function (): void {
         $this->updatePlayerTimes();
-    }), 20);
+    }), 20 * 60);
 
     $this->getServer()->getPluginManager()->registerEvents($this, $this);
         }
@@ -162,6 +166,32 @@ class Main extends PluginBase implements Listener {
             $pos->getZ() >= min($this->afkZone['z1'], $this->afkZone['z2']) &&
             $pos->getZ() <= max($this->afkZone['z1'], $this->afkZone['z2'])
         );
+    }
+
+    private function updateLeaderboard(): void {
+    arsort($this->playersInZone);
+    $topPlayers = array_slice($this->playersInZone, 0, 5, true);
+
+    foreach ($this->leaderboardParticles as $particle) {
+        $particle->getWorld()->addParticle($particle->getPosition(), new FloatingTextParticle("", ""));
+    }
+    $this->leaderboardParticles = [];
+
+    $world = $this->getServer()->getWorldManager()->getDefaultWorld();
+    $basePosition = new Vector3(100, 65, 100);
+
+    $index = 0;
+    foreach ($topPlayers as $name => $time) {
+        $timeText = gmdate("H:i:s", $time);
+        $text = "§e{$name}: §7{$timeText}";
+
+        $position = $basePosition->add(0, $index * 1.5, 0);
+        $particle = new FloatingTextParticle($text);
+        $world->addParticle($position, $particle);
+
+        $this->leaderboardParticles[] = $particle;
+        $index++;
+       }
     }
 
     private function grantMoney(Player $player): void {
