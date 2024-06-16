@@ -14,6 +14,7 @@ use pocketmine\scheduler\ClosureTask;
 use pocketmine\world\particle\FloatingTextParticle;
 use pocketmine\math\Vector3;
 use pocketmine\world\World;
+use jojoe77777\FormAPI\SimpleForm;
 use onebone\economyapi\EconomyAPI;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
 
@@ -61,57 +62,63 @@ class Main extends PluginBase implements Listener {
     }
 
     public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
-        if ($command->getName() === "afkzone") {
-            if (!$sender instanceof Player) {
-                $sender->sendMessage("This command can only be used in-game.");
-                return true;
-            }
-
-            if (!$sender->hasPermission("afkzone.command")) {
-                $sender->sendMessage("You do not have permission to use this command.");
-                return true;
-            }
-
-            if (count($args) < 1) {
-                $sender->sendMessage("Usage: /afkzone <setworld|setposition>");
-                return true;
-            }
-
-            switch ($args[0]) {
-                case "setworld":
-                    $this->setAfkZoneWorld($sender);
-                    break;
-                case "setposition":
-                    if (count($args) < 2) {
-                        $sender->sendMessage("Usage: /afkzone setposition <1|2>");
-                        return true;
-                    }
-                    $this->setAfkZonePosition($sender, $args[1]);
-                    break;
-                default:
-                    $sender->sendMessage("Usage: /afkzone <setworld|setposition>");
-                    return true;
-            }
-
-            return true;
-        } elseif ($command->getName() === "settopafk") {
-            if (!$sender instanceof Player) {
-                $sender->sendMessage("This command can only be used in-game.");
-                return true;
-            }
-
-            if (!$sender->hasPermission("afkzone.settopafk")) {
-                $sender->sendMessage("You do not have permission to use this command.");
-                return true;
-            }
-
-            $this->setTopAfkPosition($sender);
+    if ($command->getName() === "afkzone") {
+        if (!$sender instanceof Player) {
+            $sender->sendMessage("This command can only be used in-game.");
             return true;
         }
 
-        return false;
+        if (!$sender->hasPermission("afkzone.command")) {
+            $sender->sendMessage("You do not have permission to use this command.");
+            return true;
+        }
+
+        if (count($args) < 1) {
+            $sender->sendMessage("Usage: /afkzone <ui|setworld|setposition>");
+            return true;
+        }
+
+        switch ($args[0]) {
+            case "ui":
+                $this->showAfkZoneForm($sender);
+                break;
+            case "setworld":
+                $this->setAfkZoneWorld($sender);
+                break;
+            case "setposition":
+                if (!isset($this->afkZone['world'])) {
+                    $sender->sendMessage("You must set the world before setting positions.");
+                    return true;
+                }
+                if (count($args) < 2) {
+                    $sender->sendMessage("Usage: /afkzone setposition <1|2>");
+                    return true;
+                }
+                $this->setAfkZonePosition($sender, $args[1]);
+                break;
+            default:
+                $sender->sendMessage("Usage: /afkzone <ui|setworld|setposition>");
+                return true;
+        }
+        return true;
+    } elseif ($command->getName() === "settopafk") {
+        if (!$sender instanceof Player) {
+            $sender->sendMessage("This command can only be used in-game.");
+            return true;
+        }
+
+        if (!$sender->hasPermission("afkzone.settopafk")) {
+            $sender->sendMessage("You do not have permission to use this command.");
+            return true;
+        }
+
+        $this->setTopAfkPosition($sender);
+        return true;
     }
 
+    return false;
+ }
+    
     private function setAfkZoneWorld(Player $player): void {
         $worldName = $player->getWorld()->getFolderName();
         $this->afkZone['world'] = $worldName;
@@ -230,6 +237,62 @@ class Main extends PluginBase implements Listener {
         }
     }
 
+   private function showAfkZoneForm(Player $player): void {
+    $form = new SimpleForm(function (Player $player, ?int $data) {
+        if ($data === null) {
+            return;
+        }
+
+        switch ($data) {
+            case 0:
+                $this->setAfkZoneWorld($player);
+                break;
+            case 1:
+                if (!isset($this->afkZone['world'])) {
+                    $player->sendMessage("You must set the world before setting positions.");
+                    return;
+                }
+                $this->setAfkZonePosition($player, "1");
+                break;
+            case 2:
+                if (!isset($this->afkZone['world'])) {
+                    $player->sendMessage("You must set the world before setting positions.");
+                    return;
+                }
+                $this->setAfkZonePosition($player, "2");
+                break;
+            case 3:
+                $this->setTopAfkPosition($player);
+                break;
+            case 4:
+                $this->unsetAfkLeaderboardPosition($player);
+                break;
+        }
+    });
+
+    $form->setTitle("AFKZone Settings");
+    $form->addButton("Set AFKZone World");
+    $form->addButton("Set AFKZone Position 1");
+    $form->addButton("Set AFKZone Position 2");
+    $form->addButton("Set Leaderboard Position");
+    $form->addButton("Unset Leaderboard Position");
+    $player->sendForm($form);
+ }
+
+    private function unsetAfkLeaderboardPosition(Player $player): void {
+    $config = $this->getConfig();
+    if ($config->exists("leaderboard.position")) {
+        $config->remove("leaderboard.position.world");
+        $config->remove("leaderboard.position.x");
+        $config->remove("leaderboard.position.y");
+        $config->remove("leaderboard.position.z");
+        $config->save();
+        $player->sendMessage("AFK leaderboard position has been unset.");
+    } else {
+        $player->sendMessage("AFK leaderboard position is not set.");
+    }
+ }
+    
     private function updateLeaderboard(): void {
         arsort($this->playersInZone);
         $topPlayers = array_slice($this->playersInZone, 0, 5, true);
