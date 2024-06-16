@@ -34,7 +34,17 @@ class Main extends PluginBase implements Listener {
     public function onEnable(): void {
         $this->loadLanguage();
         $this->saveDefaultConfig();
+        $this->saveResourceDirectory("Language");
         $this->afkZone = $this->getConfig()->get("afk-zone", []);
+
+        $language = $this->getConfig()->get("Language", "English");
+        $languageFile = $this->getDataFolder() . "Language/" . $language . ".yml";
+
+    if (!file_exists($languageFile)) {
+        $this->getLogger()->error("Language file not found: " . $languageFile);
+    } else {
+        $this->loadLanguage($languageFile);
+    }
 
         $economy = $this->getConfig()->get("economy-plugin", "EconomyAPI");
         if ($economy === "BedrockEconomy") {
@@ -67,6 +77,56 @@ class Main extends PluginBase implements Listener {
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
         $this->getServer()->getPluginManager()->registerEvents(new class($this) implements Listener {
     private $plugin;
+
+    /**
+ * Copies a directory from the plugin resources to the data folder
+ * 
+ * @param string $resourceDir
+ */
+private function saveResourceDirectory(string $resourceDir): void {
+    $pluginDataFolder = $this->getDataFolder();
+    $source = $this->getFile() . "resources/" . $resourceDir;
+    $destination = $pluginDataFolder . $resourceDir;
+
+    if (!is_dir($destination)) {
+        mkdir($destination, 0755, true);
+    }
+
+    $this->recurseCopy($source, $destination);
+}
+
+/**
+ * Recursively copies files and directories
+ * 
+ * @param string $src
+ * @param string $dst
+ */
+private function recurseCopy(string $src, string $dst): void {
+    $dir = opendir($src);
+    while (false !== ($file = readdir($dir))) {
+        if ($file != '.' && $file != '..') {
+            if (is_dir($src . '/' . $file)) {
+                if (!is_dir($dst . '/' . $file)) {
+                    mkdir($dst . '/' . $file);
+                }
+                $this->recurseCopy($src . '/' . $file, $dst . '/' . $file);
+            } else {
+                copy($src . '/' . $file, $dst . '/' . $file);
+            }
+        }
+    }
+    closedir($dir);
+}
+
+/**
+ * Loads the language file
+ * 
+ * @param string $file
+ */
+private function loadLanguage(string $file): void {
+    $langConfig = new Config($file, Config::YAML);
+    $this->messages = $langConfig->getAll();
+}
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
