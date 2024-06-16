@@ -5,4 +5,5 @@ branches:
 projects:
   AFKZone:
     path: ""
+    icon: icon.png
 ...
