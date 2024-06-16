@@ -1,0 +1,12 @@
+messages:
+  in_game_only: "This command can only be used in-game."
+  no_permission: "You do not have permission to use this command."
+  usage_afkzone: "Usage: /afkzone <ui|setworld|setposition>"
+  world_set: "AFKZone world set to {world}"
+  set_position_1: "AFKZone position 1 set to X: {x}, Y: {y}, Z: {z}"
+  set_position_2: "AFKZone position 2 set to X: {x}, Y: {y}, Z: {z}"
+  must_set_world: "You must set the world before setting positions."
+  invalid_position: "Invalid position. Use 1 or 2."
+  leaderboard_unset: "Leaderboard position has been unset."
+  leaderboard_not_set: "Leaderboard position is not set."
+  received_money: "You have received {amount} for being in the AFKZone!"
