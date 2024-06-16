@@ -19,7 +19,6 @@ use Ifera\ScoreHud\event\TagsResolveEvent;
 use Ifera\ScoreHud\ScoreHud;
 use Ifera\ScoreHud\scoreboard\ScoreTag;
 use pocketmine\event\player\PlayerJoinEvent;
-use pocketmine\world\sound\NoteBlockSound;
 use onebone\economyapi\EconomyAPI;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
 
