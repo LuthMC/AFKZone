@@ -114,7 +114,6 @@ class Main extends PluginBase implements Listener {
         }
         return TextFormat::colorize($message);
     }
-}
 
     public function onEnable(): void {
         $this->loadLanguage();
