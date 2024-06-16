@@ -19,6 +19,7 @@ use Ifera\ScoreHud\event\TagsResolveEvent;
 use Ifera\ScoreHud\ScoreHud;
 use Ifera\ScoreHud\scoreboard\ScoreTag;
 use pocketmine\event\player\PlayerJoinEvent;
+use pocketmine\world\sound\NoteBlockSound;
 use onebone\economyapi\EconomyAPI;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
 
@@ -34,7 +35,7 @@ class Main extends PluginBase implements Listener {
     public function onEnable(): void {
         $this->loadLanguage();
         $this->saveDefaultConfig();
-        $this->saveResourceDirectory("Language");
+        $this->saveResource("Language");
         $this->afkZone = $this->getConfig()->get("afk-zone", []);
 
         $language = $this->getConfig()->get("Language", "English");
@@ -101,6 +102,7 @@ private function saveResourceDirectory(string $resourceDir): void {
  * @param string $src
  * @param string $dst
  */
+            
 private function recurseCopy(string $src, string $dst): void {
     $dir = opendir($src);
     while (false !== ($file = readdir($dir))) {
@@ -123,6 +125,7 @@ private function recurseCopy(string $src, string $dst): void {
  * 
  * @param string $file
  */
+            
 private function loadLanguage(string $file): void {
     $langConfig = new Config($file, Config::YAML);
     $this->messages = $langConfig->getAll();
@@ -363,8 +366,8 @@ private function loadLanguage(string $file): void {
             return;
         }
 
-        $player->getWorld()->addSound($player->getPosition(), new NoteBlockSound(NoteBlockSound::PITCH_BELL));
-
+        $player->getWorld()->addSound($player->getPosition(), new NoteBlockSound());
+        
         switch ($data) {
             case 0:
                 $this->setAfkZoneWorld($player);
