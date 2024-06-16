@@ -1,5 +1,18 @@
 <?php
 
+
+#            ______ _  __ ______                
+#      /\   |  ____| |/ /|___  /                
+#     /  \  | |__  | ' /    / / ___  _ __   ___ 
+#    / /\ \ |  __| |  <    / / / _ \| '_ \ / _ \
+#   / ____ \| |    | . \  / /_| (_) | | | |  __/
+#  /_/    \_\_|    |_|\_\/_____\___/|_| |_|\___|
+#                                               
+# © LuthMC
+#
+# Github: https://github.com/LuthMC
+# Thanks to fernanACM
+
 declare(strict_types=1);
 
 namespace Luthfi\AFKZone;
@@ -7,6 +20,7 @@ namespace Luthfi\AFKZone;
 use pocketmine\plugin\PluginBase;
 use pocketmine\event\Listener;
 use pocketmine\utils\Config;
+use pocketmine\utils\TextFormat;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -31,6 +45,76 @@ class Main extends PluginBase implements Listener {
     private $bedrockEconomyAPI;
     private $leaderboardParticles = [];
     private $messages = [];
+    protected const DATAFOLDER_NAME = "Language";
+
+    public const LANGUAGES = [
+        "English", // English
+        "Indonesia", // Indonesia
+    ];
+
+    /** @var Config $messages */
+    protected static Config $messages;
+
+    /**
+     * @return void
+     */
+    public static function init(): void{
+        @mkdir(Loader::getInstance()->getDataFolder(). self::DATAFOLDER_NAME);
+        foreach(self::LANGUAGES as $language){
+            Loader::getInstance()->saveResource(self::DATAFOLDER_NAME."/$language.yml");
+        }
+        self::loadMessages();
+    }
+
+    /**
+     * @return void
+     */
+    public static function loadMessages(): void{
+        self::$messages = new Config(Loader::getInstance()->getDataFolder().self::DATAFOLDER_NAME."/".self::getLanguage().".yml");
+    }
+
+    /**
+     * @return string
+     */
+    public static function getLanguage(): string{
+        return strval(Loader::getInstance()->config->get("Language", "English"));
+    }
+
+    /**
+     * @param Player $player
+     * @param string $key
+     * @param array $replaces
+     * @return string
+     */
+    public static function getPlayerMessage(Player $player, string $key, array $replaces = []): string{
+        $messageArray = self::$messages->getNested($key, []);
+        if(!is_array($messageArray)){
+            $messageArray = [$messageArray];
+        }
+        $message = implode("\n", $messageArray);
+        foreach($replaces as $search => $replace){
+            $message = str_replace($search, (string)$replace, $message);
+        }
+        return PluginUtils::codeUtil($player, $message);
+    }
+
+    /**
+     * @param string $key
+     * @param array $replaces
+     * @return string
+     */
+    public static function getMessage(string $key, array $replaces = []): string{
+        $messageArray = self::$messages->getNested($key, []);
+        if(!is_array($messageArray)){
+            $messageArray = [$messageArray];
+        }
+        $message = implode("\n", $messageArray);
+        foreach($replaces as $search => $replace){
+            $message = str_replace($search, (string)$replace, $message);
+        }
+        return TextFormat::colorize($message);
+    }
+}
 
     public function onEnable(): void {
         $this->loadLanguage();
@@ -78,47 +162,6 @@ class Main extends PluginBase implements Listener {
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
         $this->getServer()->getPluginManager()->registerEvents(new class($this) implements Listener {
     private $plugin;
-
-    /**
- * Copies a directory from the plugin resources to the data folder
- * 
- * @param string $resourceDir
- */
-private function saveResourceDirectory(string $resourceDir): void {
-    $pluginDataFolder = $this->getDataFolder();
-    $source = $this->getFile() . "resources/" . $resourceDir;
-    $destination = $pluginDataFolder . $resourceDir;
-
-    if (!is_dir($destination)) {
-        mkdir($destination, 0755, true);
-    }
-
-    $this->recurseCopy($source, $destination);
-}
-
-/**
- * Recursively copies files and directories
- * 
- * @param string $src
- * @param string $dst
- */
-            
-private function recurseCopy(string $src, string $dst): void {
-    $dir = opendir($src);
-    while (false !== ($file = readdir($dir))) {
-        if ($file != '.' && $file != '..') {
-            if (is_dir($src . '/' . $file)) {
-                if (!is_dir($dst . '/' . $file)) {
-                    mkdir($dst . '/' . $file);
-                }
-                $this->recurseCopy($src . '/' . $file, $dst . '/' . $file);
-            } else {
-                copy($src . '/' . $file, $dst . '/' . $file);
-            }
-        }
-    }
-    closedir($dir);
-}
 
 /**
  * Loads the language file
