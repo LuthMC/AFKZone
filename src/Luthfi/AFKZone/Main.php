@@ -66,17 +66,20 @@ class Main extends PluginBase implements Listener {
     public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
     if ($command->getName() === "afkzone") {
         if (!$sender instanceof Player) {
-            $sender->sendMessage("This command can only be used in-game.");
+            $sender->sendMessage($this->translate("in_game_only"));
             return true;
         }
 
         if (!$sender->hasPermission("afkzone.command")) {
-            $sender->sendMessage("You do not have permission to use this command.");
+            $sender->sendMessage($this->translate("no_permission"));
             return true;
         }
 
+        $player = $sender;
+        $player->getWorld()->addSound($player->getPosition(), new NoteBlockSound(NoteBlockSound::PITCH_BELL));
+
         if (count($args) < 1) {
-            $sender->sendMessage("Usage: /afkzone <ui|setworld|setposition>");
+            $sender->sendMessage($this->translate("usage_afkzone"));
             return true;
         }
 
@@ -89,37 +92,40 @@ class Main extends PluginBase implements Listener {
                 break;
             case "setposition":
                 if (!isset($this->afkZone['world'])) {
-                    $sender->sendMessage("You must set the world before setting positions.");
+                    $sender->sendMessage($this->translate("must_set_world"));
                     return true;
                 }
                 if (count($args) < 2) {
-                    $sender->sendMessage("Usage: /afkzone setposition <1|2>");
+                    $sender->sendMessage($this->translate("usage_afkzone"));
                     return true;
                 }
                 $this->setAfkZonePosition($sender, $args[1]);
                 break;
             default:
-                $sender->sendMessage("Usage: /afkzone <ui|setworld|setposition>");
+                $sender->sendMessage($this->translate("usage_afkzone"));
                 return true;
         }
         return true;
     } elseif ($command->getName() === "settopafk") {
         if (!$sender instanceof Player) {
-            $sender->sendMessage("This command can only be used in-game.");
+            $sender->sendMessage($this->translate("in_game_only"));
             return true;
         }
 
         if (!$sender->hasPermission("afkzone.settopafk")) {
-            $sender->sendMessage("You do not have permission to use this command.");
+            $sender->sendMessage($this->translate("no_permission"));
             return true;
         }
+
+        $player = $sender;
+        $player->getWorld()->addSound($player->getPosition(), new NoteBlockSound(NoteBlockSound::PITCH_BELL));
 
         $this->setTopAfkPosition($sender);
         return true;
     }
 
     return false;
- }
+}
 
     private function loadLanguage(): void {
     $language = $this->getConfig()->get("Language", "English");
@@ -178,6 +184,19 @@ class Main extends PluginBase implements Listener {
     $this->getConfig()->save();
 }
 
+    private function setTopAfkPosition(Player $player): void {
+        $x = $player->getPosition()->getX();
+        $y = $player->getPosition()->getY();
+        $z = $player->getPosition()->getZ();
+        $world = $player->getWorld()->getFolderName();
+
+        $this->getConfig()->set("leaderboard.position.x", $x);
+        $this->getConfig()->set("leaderboard.position.y", $y);
+        $this->getConfig()->set("leaderboard.position.z", $z);
+        $this->getConfig()->set("leaderboard.position.world", $world);
+        $this->getConfig()->save();
+
+        $player->sendMessage("Leaderboard position set to X: $x, Y: $y, Z: $z in world: $world");
     public function checkAfkZone(): void {
         foreach ($this->getServer()->getOnlinePlayers() as $player) {
             if ($this->isInAfkZone($player)) {
@@ -250,20 +269,22 @@ class Main extends PluginBase implements Listener {
             return;
         }
 
+        $player->getWorld()->addSound($player->getPosition(), new NoteBlockSound(NoteBlockSound::PITCH_BELL));
+
         switch ($data) {
             case 0:
                 $this->setAfkZoneWorld($player);
                 break;
             case 1:
                 if (!isset($this->afkZone['world'])) {
-                    $player->sendMessage("You must set the world before setting positions.");
+                    $player->sendMessage($this->translate("must_set_world"));
                     return;
                 }
                 $this->setAfkZonePosition($player, "1");
                 break;
             case 2:
                 if (!isset($this->afkZone['world'])) {
-                    $player->sendMessage("You must set the world before setting positions.");
+                    $player->sendMessage($this->translate("must_set_world"));
                     return;
                 }
                 $this->setAfkZonePosition($player, "2");
@@ -284,7 +305,7 @@ class Main extends PluginBase implements Listener {
     $form->addButton("Set Leaderboard Position");
     $form->addButton("Unset Leaderboard Position");
     $player->sendForm($form);
- }
+ }   
 
     private function unsetAfkLeaderboardPosition(Player $player): void {
     $config = $this->getConfig();
