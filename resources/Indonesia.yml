@@ -1,0 +1,12 @@
+messages:
+  in_game_only: "Perintah ini hanya dapat digunakan dalam permainan."
+  no_permission: "Anda tidak memiliki izin untuk menggunakan perintah ini."
+  usage_afkzone: "Cara Memakai: /afkzone <ui|setworld|setposition>"
+  world_set: "Dunia AFKZone diatur ke {world}"
+  set_position_1: "Posisi AFKZone 1 diatur ke X: {x}, Y: {y}, Z: {z}"
+  set_position_2: "Posisi AFKZone 2 diatur ke X: {x}, Y: {y}, Z: {z}"
+  must_set_world: "Anda harus mengatur dunia sebelum mengatur posisi."
+  invalid_position: "Posisi tidak valid. Gunakan 1 atau 2."
+  leaderboard_unset: "Posisi leaderboard telah dihapus."
+  leaderboard_not_set: "Posisi leaderboard belum diatur."
+  received_money: "Anda telah menerima {amount} karena berada di AFKZone"
