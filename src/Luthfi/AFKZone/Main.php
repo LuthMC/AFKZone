@@ -48,7 +48,8 @@ class Main extends PluginBase implements Listener {
     public function onEnable(): void {
         $this->loadLanguage();
         $this->saveDefaultConfig();
-        $this->saveResource("Language");
+        $this->saveResource("English.yml");
+        $this->saveResource("Indonesia.yml");
         $this->afkZone = $this->getConfig()->get("afk-zone", []);
 
         $language = $this->getConfig()->get("Language", "English");
@@ -192,24 +193,24 @@ private function loadLanguage(string $file): void {
 }
 
     private function loadLanguage(): void {
-    $language = $this->getConfig()->get("Language", "English");
-    $languageFile = $this->getDataFolder() . "Language/" . $language . ".yml";
-    
-    if (!file_exists($languageFile)) {
-        $this->getLogger()->error("Language file for '$language' not found, defaulting to English.");
-        $languageFile = $this->getDataFolder() . "Language/English.yml";
+        $language = $this->getConfig()->get("Language", "English");
+        $languageFile = $this->getDataFolder() . $language . ".yml";
+
+        if (!file_exists($languageFile)) {
+            $this->getLogger()->error("Language file for '$language' not found, defaulting to English.");
+            $languageFile = $this->getDataFolder() . "English.yml";
+        }
+
+        $this->messages = yaml_parse_file($languageFile)["messages"];
     }
-    
-    $this->messages = yaml_parse_file($languageFile)["messages"];
- }
 
     private function translate(string $key, array $params = []): string {
-    $message = $this->messages[$key] ?? $key;
-    foreach ($params as $key => $value) {
-        $message = str_replace("{" . $key . "}", $value, $message);
+        $message = $this->messages[$key] ?? $key;
+        foreach ($params as $key => $value) {
+            $message = str_replace("{" . $key . "}", $value, $message);
+        }
+        return $message;
     }
-    return $message;
-}
     
     private function setAfkZoneWorld(Player $player): void {
     $worldName = $player->getWorld()->getFolderName();
