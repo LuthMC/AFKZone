@@ -11,7 +11,6 @@
 # © LuthMC
 #
 # Github: https://github.com/LuthMC
-# Thanks to fernanACM
 
 declare(strict_types=1);
 
@@ -44,75 +43,7 @@ class Main extends PluginBase implements Listener {
     private $economyPlugin;
     private $bedrockEconomyAPI;
     private $leaderboardParticles = [];
-    protected const DATAFOLDER_NAME = "Language";
-
-    public const LANGUAGES = [
-        "English", // English
-        "Indonesia", // Indonesia
-    ];
-
-    /** @var Config $messages */
-    protected static Config $messages;
-
-    /**
-     * @return void
-     */
-    public static function init(): void{
-        @mkdir(Loader::getInstance()->getDataFolder(). self::DATAFOLDER_NAME);
-        foreach(self::LANGUAGES as $language){
-            Loader::getInstance()->saveResource(self::DATAFOLDER_NAME."/$language.yml");
-        }
-        self::loadMessages();
-    }
-
-    /**
-     * @return void
-     */
-    public static function loadMessages(): void{
-        self::$messages = new Config(Loader::getInstance()->getDataFolder().self::DATAFOLDER_NAME."/".self::getLanguage().".yml");
-    }
-
-    /**
-     * @return string
-     */
-    public static function getLanguage(): string{
-        return strval(Loader::getInstance()->config->get("Language", "English"));
-    }
-
-    /**
-     * @param Player $player
-     * @param string $key
-     * @param array $replaces
-     * @return string
-     */
-    public static function getPlayerMessage(Player $player, string $key, array $replaces = []): string{
-        $messageArray = self::$messages->getNested($key, []);
-        if(!is_array($messageArray)){
-            $messageArray = [$messageArray];
-        }
-        $message = implode("\n", $messageArray);
-        foreach($replaces as $search => $replace){
-            $message = str_replace($search, (string)$replace, $message);
-        }
-        return PluginUtils::codeUtil($player, $message);
-    }
-
-    /**
-     * @param string $key
-     * @param array $replaces
-     * @return string
-     */
-    public static function getMessage(string $key, array $replaces = []): string{
-        $messageArray = self::$messages->getNested($key, []);
-        if(!is_array($messageArray)){
-            $messageArray = [$messageArray];
-        }
-        $message = implode("\n", $messageArray);
-        foreach($replaces as $search => $replace){
-            $message = str_replace($search, (string)$replace, $message);
-        }
-        return TextFormat::colorize($message);
-    }
+    private $messages = [];
 
     public function onEnable(): void {
         $this->loadLanguage();
@@ -251,7 +182,7 @@ private function loadLanguage(string $file): void {
         }
 
         $player = $sender;
-        $player->getWorld()->addSound($player->getPosition(), new NoteBlockSound(NoteBlockSound::PITCH_BELL));
+        $player->getWorld()->addSound($player->getPosition(), new NoteBlockSound());
 
         $this->setTopAfkPosition($sender);
         return true;
