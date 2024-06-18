@@ -19,7 +19,6 @@ namespace Luthfi\AFKZone;
 use pocketmine\plugin\PluginBase;
 use pocketmine\event\Listener;
 use pocketmine\utils\Config;
-use pocketmine\utils\TextFormat;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
@@ -53,8 +52,8 @@ class Main extends PluginBase implements Listener {
         $this->saveResource("Indonesia.yml", true);
         $this->afkZone = $this->getConfig()->get("afk-zone", []);
 
-        $language = $this->getConfig()->get("Language", "English");
-        $languageFile = $this->getDataFolder() . "Language/" . $language . ".yml";
+        $language = $this->getConfig()->get("Indonesia", "English");
+        $languageFile = $this->getDataFolder() . $language . ".yml";
 
     if (!file_exists($languageFile)) {
         $this->getLogger()->error("Language file not found: " . $languageFile);
