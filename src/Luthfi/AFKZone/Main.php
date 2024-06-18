@@ -48,8 +48,9 @@ class Main extends PluginBase implements Listener {
     public function onEnable(): void {
         $this->loadLanguage();
         $this->saveDefaultConfig();
-        $this->saveResource("English.yml");
-        $this->saveResource("Indonesia.yml");
+        $this->config = $this->getConfig();
+        $this->saveResource("English.yml", true);
+        $this->saveResource("Indonesia.yml", true);
         $this->afkZone = $this->getConfig()->get("afk-zone", []);
 
         $language = $this->getConfig()->get("Language", "English");
