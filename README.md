@@ -1,16 +1,20 @@
-# AFKZone V2 (2.2.0)
+# AFKZone V2 (2.2.2)
 [![](https://poggit.pmmp.io/shield.state/AFKZone)](https://poggit.pmmp.io/p/AFKZone) [![](https://poggit.pmmp.io/shield.dl/AFKZone)](https://poggit.pmmp.io/p/AFKZone)
 ### 💡 Feature
 You Can Customize How Much Money They Get! And Customize Worlds And Coordinates, Get Money Every Minutes.
 
-(Now support EconomyAPI & BedrockEconomy)
+(Support EconomyAPI, BedrockEconomy & PocketEconomy)
+
+### ✅ New Feature
+[+] Add UI                                                  
+[+] Add Leaderboard
 
 ### ⚙️ Commands
 | Commands | Description |
 |---------|-------------|
 | ```/afkzone``` | Commands List |
-| ```/settopafp``` | Set Leaderboard |
-| You can use /az commands. |
+| ```/settopafk``` | Set Leaderboard |
+You can use /az commands.
 
 ### 🔒 Permission
 | Permission | Description |
@@ -23,7 +27,7 @@ You Can Customize How Much Money They Get! And Customize Worlds And Coordinates,
 [Dev Builds](https://poggit.pmmp.io/ci/LuthMC/AFKZone/AFKZone)
 
 ### 📢 Found Bugs
-If you found any bugs please use [issue](https://github.com/LuthMC/AFKZone/issue)!
+If you found any bugs please use [issue](https://github.com/LuthMC/AFKZone/issues)!
 
 ### 💎 Credits
 | **Author** |                                                                    
