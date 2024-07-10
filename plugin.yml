@@ -1,6 +1,7 @@
 name: AFKZone
 main: Luthfi\AFKZone\Main
-version: 2.2.0
+author: Luthfi
+version: 2.2.1
 api: 5.16.0
 commands:
   afkzone:
