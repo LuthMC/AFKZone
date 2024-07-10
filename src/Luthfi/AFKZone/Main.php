@@ -37,31 +37,43 @@ class Main extends PluginBase implements Listener {
     private $playersInZone = [];
     private $economyPlugin;
     private $bedrockEconomyAPI;
-    private $economy;
+    private $pocketEconomy;
     private $leaderboardParticles = [];
 
     public function onEnable(): void {
         $this->saveDefaultConfig();
         $this->afkZone = $this->getConfig()->get("afk-zone", []);
-        $this->initEconomy();
 
         $economy = $this->getConfig()->get("economy-plugin", "EconomyAPI");
-        if ($economy === "BedrockEconomy") {
-            $bedrockEconomy = $this->getServer()->getPluginManager()->getPlugin("BedrockEconomy");
-            if ($bedrockEconomy !== null && $bedrockEconomy->isEnabled()) {
-                $this->economyPlugin = "BedrockEconomy";
-                if (class_exists(BedrockEconomyAPI::class)) {
-                    $this->bedrockEconomyAPI = BedrockEconomyAPI::getInstance();
+        switch ($economy) {
+            case "BedrockEconomy":
+                $bedrockEconomy = $this->getServer()->getPluginManager()->getPlugin("BedrockEconomy");
+                if ($bedrockEconomy !== null && $bedrockEconomy->isEnabled()) {
+                    $this->economyPlugin = "BedrockEconomy";
+                    if (class_exists(BedrockEconomyAPI::class)) {
+                        $this->bedrockEconomyAPI = BedrockEconomyAPI::getInstance();
+                    } else {
+                        $this->getLogger()->error("BedrockEconomyAPI class not found! Defaulting to EconomyAPI.");
+                        $this->economyPlugin = "EconomyAPI";
+                    }
                 } else {
-                    $this->getLogger()->error("BedrockEconomyAPI class not found!");
+                    $this->getLogger()->error("BedrockEconomy plugin not found or not enabled! Defaulting to EconomyAPI.");
                     $this->economyPlugin = "EconomyAPI";
                 }
-            } else {
-                $this->getLogger()->error("BedrockEconomy plugin not found or not enabled! Defaulting to EconomyAPI.");
+                break;
+            case "PocketEconomy":
+                $pocketEconomy = $this->getServer()->getPluginManager()->getPlugin("PocketEconomy");
+                if ($pocketEconomy !== null && $pocketEconomy->isEnabled()) {
+                    $this->economyPlugin = "PocketEconomy";
+                    $this->pocketEconomy = $pocketEconomy;
+                } else {
+                    $this->getLogger()->error("PocketEconomy plugin not found or not enabled! Defaulting to EconomyAPI.");
+                    $this->economyPlugin = "EconomyAPI";
+                }
+                break;
+            default:
                 $this->economyPlugin = "EconomyAPI";
-            }
-        } else {
-            $this->economyPlugin = "EconomyAPI";
+                break;
         }
 
         $this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function (): void {
@@ -76,77 +88,64 @@ class Main extends PluginBase implements Listener {
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
     }
 
-    private function initEconomy(): void {
-        $this->economy = Server::getInstance()->getPluginManager()->getPlugin("PocketEconomy");
-        if ($this->economy === null) {
-            $this->getLogger()->error("PocketEconomy plugin not found!");
-        } else {
-            $this->getLogger()->info("PocketEconomy plugin found and hooked!");
-        }
-    }
-    
-    public function getEconomy(): ?PocketEconomy {
-        return $this->economy;
-    }
-
     public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
-    if ($command->getName() === "afkzone") {
-        if (!$sender instanceof Player) {
-            $sender->sendMessage("This command can only be used in-game.");
-            return true;
-        }
+        if ($command->getName() === "afkzone") {
+            if (!$sender instanceof Player) {
+                $sender->sendMessage("This command can only be used in-game.");
+                return true;
+            }
 
-        if (!$sender->hasPermission("afkzone.command")) {
-            $sender->sendMessage("You do not have permission to use this command.");
-            return true;
-        }
+            if (!$sender->hasPermission("afkzone.command")) {
+                $sender->sendMessage("You do not have permission to use this command.");
+                return true;
+            }
 
-        if (count($args) < 1) {
-            $sender->sendMessage("Usage: /afkzone <ui|setworld|setposition>");
-            return true;
-        }
-
-        switch ($args[0]) {
-            case "ui":
-                $this->showAfkZoneForm($sender);
-                break;
-            case "setworld":
-                $this->setAfkZoneWorld($sender);
-                break;
-            case "setposition":
-                if (!isset($this->afkZone['world'])) {
-                    $sender->sendMessage("You must set the world before setting positions.");
-                    return true;
-                }
-                if (count($args) < 2) {
-                    $sender->sendMessage("Usage: /afkzone setposition <1|2>");
-                    return true;
-                }
-                $this->setAfkZonePosition($sender, $args[1]);
-                break;
-            default:
+            if (count($args) < 1) {
                 $sender->sendMessage("Usage: /afkzone <ui|setworld|setposition>");
                 return true;
-        }
-        return true;
-    } elseif ($command->getName() === "settopafk") {
-        if (!$sender instanceof Player) {
-            $sender->sendMessage("This command can only be used in-game.");
+            }
+
+            switch ($args[0]) {
+                case "ui":
+                    $this->showAfkZoneForm($sender);
+                    break;
+                case "setworld":
+                    $this->setAfkZoneWorld($sender);
+                    break;
+                case "setposition":
+                    if (!isset($this->afkZone['world'])) {
+                        $sender->sendMessage("You must set the world before setting positions.");
+                        return true;
+                    }
+                    if (count($args) < 2) {
+                        $sender->sendMessage("Usage: /afkzone setposition <1|2>");
+                        return true;
+                    }
+                    $this->setAfkZonePosition($sender, $args[1]);
+                    break;
+                default:
+                    $sender->sendMessage("Usage: /afkzone <ui|setworld|setposition>");
+                    return true;
+            }
+            return true;
+        } elseif ($command->getName() === "settopafk") {
+            if (!$sender instanceof Player) {
+                $sender->sendMessage("This command can only be used in-game.");
+                return true;
+            }
+
+            if (!$sender->hasPermission("afkzone.settopafk")) {
+                $sender->sendMessage("You do not have permission to use this command.");
+                return true;
+            }
+
+            $this->setTopAfkPosition($sender);
             return true;
         }
 
-        if (!$sender->hasPermission("afkzone.settopafk")) {
-            $sender->sendMessage("You do not have permission to use this command.");
-            return true;
-        }
-
-        $this->setTopAfkPosition($sender);
-        return true;
+        return false;
     }
 
-    return false;
- }
-    
     private function setAfkZoneWorld(Player $player): void {
         $worldName = $player->getWorld()->getFolderName();
         $this->afkZone['world'] = $worldName;
