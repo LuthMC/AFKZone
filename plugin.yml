@@ -2,6 +2,7 @@ name: AFKZone
 main: Luthfi\AFKZone\Main
 author: Luthfi
 version: 2.2.1
+depend: [EconomyAPI]
 api: 5.16.0
 commands:
   afkzone:
