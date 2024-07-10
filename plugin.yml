@@ -1,11 +1,10 @@
 name: AFKZone
 main: Luthfi\AFKZone\Main
 version: 1.0.1
-api: [5.0.0]
-depend: [EconomyAPI]
+api: 5.16.0
 commands:
   afkzone:
-    description: Configure the AFK zone
+    description: Configure the AFKZone
     usage: /afkzone <setworld|setposition>
     aliases: [az]
     permission: afkzone.command
