@@ -27,11 +27,6 @@ use pocketmine\world\particle\FloatingTextParticle;
 use pocketmine\math\Vector3;
 use pocketmine\world\World;
 use jojoe77777\FormAPI\SimpleForm;
-use Ifera\ScoreHud\event\TagsResolveEvent;
-use Ifera\ScoreHud\ScoreHud;
-use Ifera\ScoreHud\scoreboard\ScoreTag;
-use pocketmine\event\player\PlayerJoinEvent;
-use pocketmine\world\sound\NoteBlockSound;
 use onebone\economyapi\EconomyAPI;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
 
@@ -42,24 +37,10 @@ class Main extends PluginBase implements Listener {
     private $economyPlugin;
     private $bedrockEconomyAPI;
     private $leaderboardParticles = [];
-    private $messages = [];
 
     public function onEnable(): void {
-        $this->loadLanguage();
         $this->saveDefaultConfig();
-        $this->config = $this->getConfig();
-        $this->saveResource("English.yml", true);
-        $this->saveResource("Indonesia.yml", true);
         $this->afkZone = $this->getConfig()->get("afk-zone", []);
-
-        $language = $this->getConfig()->get("Indonesia", "English");
-        $languageFile = $this->getDataFolder() . $language . ".yml";
-
-    if (!file_exists($languageFile)) {
-        $this->getLogger()->error("Language file not found: " . $languageFile);
-    } else {
-        $this->loadLanguage($languageFile);
-    }
 
         $economy = $this->getConfig()->get("economy-plugin", "EconomyAPI");
         if ($economy === "BedrockEconomy") {
@@ -90,61 +71,22 @@ class Main extends PluginBase implements Listener {
         }), 20 * 60);
 
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
-        $this->getServer()->getPluginManager()->registerEvents(new class($this) implements Listener {
-    private $plugin;
-
-/**
- * Loads the language file
- * 
- * @param string $file
- */
-            
-private function loadLanguage(string $file): void {
-    $langConfig = new Config($file, Config::YAML);
-    $this->messages = $langConfig->getAll();
-}
-
-    public function __construct(Main $plugin) {
-        $this->plugin = $plugin;
     }
-
-    public function onJoin(PlayerJoinEvent $event): void {
-        $player = $event->getPlayer();
-        ScoreHud::getInstance()->setScoreTag(new ScoreTag($player, "afkzone.time", "0s"));
-    }
-
-    public function onTagsResolve(TagsResolveEvent $event): void {
-        $tag = $event->getTag();
-        $player = $event->getPlayer();
-        if ($tag->getName() === "afkzone.time") {
-            $timeInZone = $this->plugin->playersInZone[$player->getName()] ?? 0;
-            $hours = floor($timeInZone / 3600);
-            $minutes = floor(($timeInZone % 3600) / 60);
-            $seconds = $timeInZone % 60;
-            $timeString = sprintf("%dh %dm %ds", $hours, $minutes, $seconds);
-            $tag->setValue($timeString);
-            }
-        }
-    }, $this);
-}
 
     public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
     if ($command->getName() === "afkzone") {
         if (!$sender instanceof Player) {
-            $sender->sendMessage($this->translate("in_game_only"));
+            $sender->sendMessage("This command can only be used in-game.");
             return true;
         }
 
         if (!$sender->hasPermission("afkzone.command")) {
-            $sender->sendMessage($this->translate("no_permission"));
+            $sender->sendMessage("You do not have permission to use this command.");
             return true;
         }
 
-        $player = $sender;
-        $player->getWorld()->addSound($player->getPosition(), new NoteBlockSound(NoteBlockSound::PITCH_BELL));
-
         if (count($args) < 1) {
-            $sender->sendMessage($this->translate("usage_afkzone"));
+            $sender->sendMessage("Usage: /afkzone <ui|setworld|setposition>");
             return true;
         }
 
@@ -157,97 +99,74 @@ private function loadLanguage(string $file): void {
                 break;
             case "setposition":
                 if (!isset($this->afkZone['world'])) {
-                    $sender->sendMessage($this->translate("must_set_world"));
+                    $sender->sendMessage("You must set the world before setting positions.");
                     return true;
                 }
                 if (count($args) < 2) {
-                    $sender->sendMessage($this->translate("usage_afkzone"));
+                    $sender->sendMessage("Usage: /afkzone setposition <1|2>");
                     return true;
                 }
                 $this->setAfkZonePosition($sender, $args[1]);
                 break;
             default:
-                $sender->sendMessage($this->translate("usage_afkzone"));
+                $sender->sendMessage("Usage: /afkzone <ui|setworld|setposition>");
                 return true;
         }
         return true;
     } elseif ($command->getName() === "settopafk") {
         if (!$sender instanceof Player) {
-            $sender->sendMessage($this->translate("in_game_only"));
+            $sender->sendMessage("This command can only be used in-game.");
             return true;
         }
 
         if (!$sender->hasPermission("afkzone.settopafk")) {
-            $sender->sendMessage($this->translate("no_permission"));
+            $sender->sendMessage("You do not have permission to use this command.");
             return true;
         }
-
-        $player = $sender;
-        $player->getWorld()->addSound($player->getPosition(), new NoteBlockSound());
 
         $this->setTopAfkPosition($sender);
         return true;
     }
 
     return false;
-}
-
-    private function loadLanguage(): void {
-        $language = $this->getConfig()->get("Language", "English");
-        $languageFile = $this->getDataFolder() . $language . ".yml";
-
-        if (!file_exists($languageFile)) {
-            $this->getLogger()->error("Language file for '$language' not found, defaulting to English.");
-            $languageFile = $this->getDataFolder() . "English.yml";
-        }
-
-        $this->messages = yaml_parse_file($languageFile)["messages"];
-    }
-
-    private function translate(string $key, array $params = []): string {
-        $message = $this->messages[$key] ?? $key;
-        foreach ($params as $key => $value) {
-            $message = str_replace("{" . $key . "}", $value, $message);
-        }
-        return $message;
-    }
+ }
     
     private function setAfkZoneWorld(Player $player): void {
-    $worldName = $player->getWorld()->getFolderName();
-    $this->afkZone['world'] = $worldName;
-    $this->getConfig()->set("afk-zone.world", $worldName);
-    $this->getConfig()->save();
-    $player->sendMessage($this->translate("world_set", ["world" => $worldName]));
-}
-
-    private function setAfkZonePosition(Player $player, string $position): void {
-    $x = $player->getPosition()->getX();
-    $y = $player->getPosition()->getY();
-    $z = $player->getPosition()->getZ();
-
-    if ($position === "1") {
-        $this->afkZone['x1'] = $x;
-        $this->afkZone['y1'] = $y;
-        $this->afkZone['z1'] = $z;
-        $this->getConfig()->set("afk-zone.x1", $x);
-        $this->getConfig()->set("afk-zone.y1", $y);
-        $this->getConfig()->set("afk-zone.z1", $z);
-        $player->sendMessage($this->translate("set_position_1", ["x" => $x, "y" => $y, "z" => $z]));
-    } elseif ($position === "2") {
-        $this->afkZone['x2'] = $x;
-        $this->afkZone['y2'] = $y;
-        $this->afkZone['z2'] = $z;
-        $this->getConfig()->set("afk-zone.x2", $x);
-        $this->getConfig()->set("afk-zone.y2", $y);
-        $this->getConfig()->set("afk-zone.z2", $z);
-        $player->sendMessage($this->translate("set_position_2", ["x" => $x, "y" => $y, "z" => $z]));
-    } else {
-        $player->sendMessage($this->translate("invalid_position"));
-        return;
+        $worldName = $player->getWorld()->getFolderName();
+        $this->afkZone['world'] = $worldName;
+        $this->getConfig()->set("afk-zone.world", $worldName);
+        $this->getConfig()->save();
+        $player->sendMessage("AFK zone world set to " . $worldName);
     }
 
-    $this->getConfig()->save();
-}
+    private function setAfkZonePosition(Player $player, string $position): void {
+        $x = $player->getPosition()->getX();
+        $y = $player->getPosition()->getY();
+        $z = $player->getPosition()->getZ();
+
+        if ($position === "1") {
+            $this->afkZone['x1'] = $x;
+            $this->afkZone['y1'] = $y;
+            $this->afkZone['z1'] = $z;
+            $this->getConfig()->set("afk-zone.x1", $x);
+            $this->getConfig()->set("afk-zone.y1", $y);
+            $this->getConfig()->set("afk-zone.z1", $z);
+            $player->sendMessage("AFK zone position 1 set to X: $x, Y: $y, Z: $z");
+        } elseif ($position === "2") {
+            $this->afkZone['x2'] = $x;
+            $this->afkZone['y2'] = $y;
+            $this->afkZone['z2'] = $z;
+            $this->getConfig()->set("afk-zone.x2", $x);
+            $this->getConfig()->set("afk-zone.y2", $y);
+            $this->getConfig()->set("afk-zone.z2", $z);
+            $player->sendMessage("AFK zone position 2 set to X: $x, Y: $y, Z: $z");
+        } else {
+            $player->sendMessage("Invalid position. Use 1 or 2.");
+            return;
+        }
+
+        $this->getConfig()->save();
+    }
 
     private function setTopAfkPosition(Player $player): void {
         $x = $player->getPosition()->getX();
@@ -263,22 +182,21 @@ private function loadLanguage(string $file): void {
 
         $player->sendMessage("Leaderboard position set to X: $x, Y: $y, Z: $z in world: $world");
     }
-    
+
     public function checkAfkZone(): void {
-    foreach ($this->getServer()->getOnlinePlayers() as $player) {
-        if ($this->isInAfkZone($player)) {
-            if (!isset($this->playersInZone[$player->getName()])) {
-                $this->playersInZone[$player->getName()] = time();
-            }
-        } else {
-            if (isset($this->playersInZone[$player->getName()])) {
-                unset($this->playersInZone[$player->getName()]);
-                $player->sendTitle("", "");
-                ScoreHud::getInstance()->setScoreTag(new ScoreTag($player, "afkzone.time", "0s"));
+        foreach ($this->getServer()->getOnlinePlayers() as $player) {
+            if ($this->isInAfkZone($player)) {
+                if (!isset($this->playersInZone[$player->getName()])) {
+                    $this->playersInZone[$player->getName()] = time();
+                }
+            } else {
+                if (isset($this->playersInZone[$player->getName()])) {
+                    unset($this->playersInZone[$player->getName()]);
+                    $player->sendTitle("", "");
+                }
             }
         }
     }
-}
 
     private function isInAfkZone(Player $player): bool {
         $pos = $player->getPosition();
@@ -314,24 +232,22 @@ private function loadLanguage(string $file): void {
         }
     }
 
-   private function updatePlayerTimes(): void {
-    foreach ($this->playersInZone as $name => $enterTime) {
-        $player = $this->getServer()->getPlayerExact($name);
-        if ($player instanceof Player) {
-            $timeInZone = time() - $enterTime;
-            $hours = floor($timeInZone / 3600);
-            $minutes = floor(($timeInZone % 3600) / 60);
-            $seconds = $timeInZone % 60;
-            $player->sendTitle("§fAFK§bZone", "§7Time: {$hours}h {$minutes}m {$seconds}s", 0, 20, 0);
+    private function updatePlayerTimes(): void {
+        foreach ($this->playersInZone as $name => $enterTime) {
+            $player = $this->getServer()->getPlayerExact($name);
+            if ($player instanceof Player) {
+                $timeInZone = time() - $enterTime;
+                $hours = floor($timeInZone / 3600);
+                $minutes = floor(($timeInZone % 3600) / 60);
+                $seconds = $timeInZone % 60;
+                $player->sendTitle("AFK §eZone", "§7Time: {$hours}h {$minutes}m {$seconds}s", 0, 20, 0);
 
-            ScoreHud::getInstance()->setScoreTag(new ScoreTag($player, "afkzone.time", "{$hours}h {$minutes}m {$seconds}s"));
-
-            if ($timeInZone > 0 && $timeInZone % 60 === 0) {
-                $this->grantMoney($player);
+                if ($timeInZone > 0 && $timeInZone % 60 === 0) {
+                    $this->grantMoney($player);
+                }
             }
         }
     }
- }
 
    private function showAfkZoneForm(Player $player): void {
     $form = new SimpleForm(function (Player $player, ?int $data) {
@@ -339,22 +255,20 @@ private function loadLanguage(string $file): void {
             return;
         }
 
-        $player->getWorld()->addSound($player->getPosition(), new NoteBlockSound());
-        
         switch ($data) {
             case 0:
                 $this->setAfkZoneWorld($player);
                 break;
             case 1:
                 if (!isset($this->afkZone['world'])) {
-                    $player->sendMessage($this->translate("must_set_world"));
+                    $player->sendMessage("You must set the world before setting positions.");
                     return;
                 }
                 $this->setAfkZonePosition($player, "1");
                 break;
             case 2:
                 if (!isset($this->afkZone['world'])) {
-                    $player->sendMessage($this->translate("must_set_world"));
+                    $player->sendMessage("You must set the world before setting positions.");
                     return;
                 }
                 $this->setAfkZonePosition($player, "2");
@@ -369,16 +283,13 @@ private function loadLanguage(string $file): void {
     });
 
     $form->setTitle("§l§fAFK§bZone §eSettings");
-    $form->setContent("§6Please choose an option:");
-       
-    $form->addButton("Set AFKZone World\n§7Click here", -1, "", 1);
-    $form->addButton("Set AFKZone Position 1\n§7Click here", -1, "", 2);
-    $form->addButton("Set AFKZone Position 2\n§7Click here", -1, "", 3);
-    $form->addButton("Set Leaderboard Position\n§7Click here", -1, "", 4);
-    $form->addButton("Unset Leaderboard Position\n§7Click here", -1, "", 5);
-       
+    $form->addButton("Set AFKZone World");
+    $form->addButton("Set AFKZone Position 1");
+    $form->addButton("Set AFKZone Position 2");
+    $form->addButton("Set Leaderboard Position");
+    $form->addButton("Unset Leaderboard Position");
     $player->sendForm($form);
- }   
+ }
 
     private function unsetAfkLeaderboardPosition(Player $player): void {
     $config = $this->getConfig();
@@ -388,11 +299,11 @@ private function loadLanguage(string $file): void {
         $config->remove("leaderboard.position.y");
         $config->remove("leaderboard.position.z");
         $config->save();
-        $player->sendMessage($this->translate("leaderboard_unset"));
+        $player->sendMessage("AFK leaderboard position has been unset.");
     } else {
-        $player->sendMessage($this->translate("leaderboard_not_set"));
+        $player->sendMessage("AFK leaderboard position is not set.");
     }
-}
+ }
     
     private function updateLeaderboard(): void {
         arsort($this->playersInZone);
