@@ -29,6 +29,7 @@ use pocketmine\world\World;
 use jojoe77777\FormAPI\SimpleForm;
 use onebone\economyapi\EconomyAPI;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
+use NurAzliYT\PocketEconomy\PocketEconomy;
 
 class Main extends PluginBase implements Listener {
 
@@ -36,11 +37,13 @@ class Main extends PluginBase implements Listener {
     private $playersInZone = [];
     private $economyPlugin;
     private $bedrockEconomyAPI;
+    private $economy;
     private $leaderboardParticles = [];
 
     public function onEnable(): void {
         $this->saveDefaultConfig();
         $this->afkZone = $this->getConfig()->get("afk-zone", []);
+        $this->initEconomy();
 
         $economy = $this->getConfig()->get("economy-plugin", "EconomyAPI");
         if ($economy === "BedrockEconomy") {
@@ -71,6 +74,19 @@ class Main extends PluginBase implements Listener {
         }), 20 * 60);
 
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
+    }
+
+    private function initEconomy(): void {
+        $this->economy = Server::getInstance()->getPluginManager()->getPlugin("PocketEconomy");
+        if ($this->economy === null) {
+            $this->getLogger()->error("PocketEconomy plugin not found!");
+        } else {
+            $this->getLogger()->info("PocketEconomy plugin found and hooked!");
+        }
+    }
+    
+    public function getEconomy(): ?PocketEconomy {
+        return $this->economy;
     }
 
     public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
@@ -229,6 +245,13 @@ class Main extends PluginBase implements Listener {
         } else {
             EconomyAPI::getInstance()->addMoney($player, $amount);
             $player->sendMessage("You have received $amount for being in the AFK zone!");
+            
+            $economy = $this->getEconomy();
+            if ($economy !== null) {
+            return $economy->addMoney($playerName, $amount);
+       }
+         return false;
+            }
         }
     }
 
