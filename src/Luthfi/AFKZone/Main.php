@@ -230,7 +230,6 @@ class Main extends PluginBase implements Listener {
     }
 
     private function grantMoney(Player $player): void {
-        private function grantMoney(Player $player): void {
         $amount = $this->getConfig()->get("reward-amount", 1000);
         $playerName = $player->getName();
 
