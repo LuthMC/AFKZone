@@ -10,4 +10,7 @@ projects:
      - src: jojoe77777/FormAPI/libFormAPI
        version: ^2.1.0
        branch: "master"
+     - src: Ifera/ScoreHud/ScoreHud
+       version: 8.0.0
+       branch: "master"
 ...
