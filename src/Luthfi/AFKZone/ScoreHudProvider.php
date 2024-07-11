@@ -7,16 +7,9 @@ use Ifera\ScoreHud\parties\PartyManager;
 use Ifera\ScoreHud\tag\PluginTag;
 use Ifera\ScoreHud\ScoreHud;
 use pocketmine\event\Listener;
-use pocketmine\plugin\PluginBase;
 use pocketmine\Server;
 
-class ScoreHudProvider extends PluginBase implements Listener {
-
-    public function onEnable(): void {
-        $this->getServer()->getPluginManager()->registerEvents($this, $this);
-
-        ScoreHud::getInstance()->getTagManager()->registerTag(new PluginTag('afkzone.time', $this));
-    }
+class ScoreHudProvider implements Listener {
 
     /**
      * Handles the PlayerTagsUpdateEvent to update the custom tag values
