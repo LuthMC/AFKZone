@@ -43,6 +43,7 @@ class Main extends PluginBase implements Listener {
 
     public function onEnable(): void {
         $this->saveDefaultConfig();
+        $config = new Config($this->getDataFolder() . "config.yml", Config::YAML);
         $requiredPlugin = $config->get("economy-plugin");
         $this->afkZone = $this->getConfig()->get("afk-zone", []);
         $this->getServer()->getPluginManager()->registerEvents(new ScoreHudProvider(), $this);
