@@ -31,6 +31,8 @@ use onebone\economyapi\EconomyAPI;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
 use NurAzliYT\PocketEconomy\PocketEconomy;
 use Luthfi\AFKZone\ScoreHudProvider;
+use Ifera\ScoreHud\tag\PluginTag;
+use Ifera\ScoreHud\ScoreHud;
 
 class Main extends PluginBase implements Listener {
 
