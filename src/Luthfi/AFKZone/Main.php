@@ -30,6 +30,7 @@ use jojoe77777\FormAPI\SimpleForm;
 use onebone\economyapi\EconomyAPI;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
 use NurAzliYT\PocketEconomy\PocketEconomy;
+use Luthfi\AFKZone\ScoreHudProvider;
 
 class Main extends PluginBase implements Listener {
 
@@ -43,6 +44,7 @@ class Main extends PluginBase implements Listener {
     public function onEnable(): void {
         $this->saveDefaultConfig();
         $this->afkZone = $this->getConfig()->get("afk-zone", []);
+        $this->getServer()->getPluginManager()->registerEvents(new ScoreHudProvider(), $this);
 
         $economy = $this->getConfig()->get("economy-plugin", "EconomyAPI");
         switch ($economy) {
