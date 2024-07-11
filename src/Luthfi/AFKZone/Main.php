@@ -45,6 +45,7 @@ class Main extends PluginBase implements Listener {
         $this->saveDefaultConfig();
         $config = new Config($this->getDataFolder() . "config.yml", Config::YAML);
         $requiredPlugin = $config->get("economy-plugin");
+        ScoreHud::getInstance()->getTagManager()->registerTag(new PluginTag('afkzone.time', $this));
         $this->afkZone = $this->getConfig()->get("afk-zone", []);
         $this->getServer()->getPluginManager()->registerEvents(new ScoreHudProvider(), $this);
 
