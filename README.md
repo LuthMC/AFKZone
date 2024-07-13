@@ -1,4 +1,4 @@
-# AFKZone V2 (2.3.0)
+# AFKZone (V2.4.0)
 [![](https://poggit.pmmp.io/shield.state/AFKZone)](https://poggit.pmmp.io/p/AFKZone) [![](https://poggit.pmmp.io/shield.dl/AFKZone)](https://poggit.pmmp.io/p/AFKZone)
 ### 💡 Feature
 You Can Customize How Much Money They Get! And Customize Worlds And Coordinates, Get Money Every Minutes.
