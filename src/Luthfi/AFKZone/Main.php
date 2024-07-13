@@ -30,7 +30,7 @@ use jojoe77777\FormAPI\SimpleForm;
 use onebone\economyapi\EconomyAPI;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
 use NurAzliYT\PocketEconomy\PocketEconomy;
-use Luthfi\AFKZone\ScoreHudProvider;
+use Luthfi\AFKZone\ScoreHud\ScoreHudListener;
 
 class Main extends PluginBase implements Listener {
 
@@ -222,20 +222,30 @@ class Main extends PluginBase implements Listener {
     }
 
     private function isInAfkZone(Player $player): bool {
-        $pos = $player->getPosition();
-        $worldName = $player->getWorld()->getFolderName();
-        if (!isset($this->afkZone['world']) || $this->afkZone['world'] !== $worldName) {
+    $pos = $player->getPosition();
+    $worldName = $player->getWorld()->getFolderName();
+
+    if (!isset($this->afkZone['world']) || $this->afkZone['world'] !== $worldName) {
+        return false;
+    }
+
+    $requiredKeys = ['x1', 'x2', 'y1', 'y2', 'z1', 'z2'];
+    foreach ($requiredKeys as $key) {
+        if (!isset($this->afkZone[$key])) {
+            $this->getLogger()->warning("Key '$key' is not set in the afkZone array.");
             return false;
         }
-        return (
-            $pos->getX() >= min($this->afkZone['x1'], $this->afkZone['x2']) &&
-            $pos->getX() <= max($this->afkZone['x1'], $this->afkZone['x2']) &&
-            $pos->getY() >= min($this->afkZone['y1'], $this->afkZone['y2']) &&
-            $pos->getY() <= max($this->afkZone['y1'], $this->afkZone['y2']) &&
-            $pos->getZ() >= min($this->afkZone['z1'], $this->afkZone['z2']) &&
-            $pos->getZ() <= max($this->afkZone['z1'], $this->afkZone['z2'])
-        );
     }
+
+    return (
+        $pos->getX() >= min($this->afkZone['x1'], $this->afkZone['x2']) &&
+        $pos->getX() <= max($this->afkZone['x1'], $this->afkZone['x2']) &&
+        $pos->getY() >= min($this->afkZone['y1'], $this->afkZone['y2']) &&
+        $pos->getY() <= max($this->afkZone['y1'], $this->afkZone['y2']) &&
+        $pos->getZ() >= min($this->afkZone['z1'], $this->afkZone['z2']) &&
+        $pos->getZ() <= max($this->afkZone['z1'], $this->afkZone['z2'])
+    );
+ }
 
     private function grantMoney(Player $player): void {
         $amount = $this->getConfig()->get("reward-amount", 1000);
