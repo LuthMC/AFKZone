@@ -9,9 +9,9 @@ projects:
     libs:
      - src: jojoe77777/FormAPI/libFormAPI
        version: ^2.1.1
-       branch: "main"
+       branch: "master"
     depend:
      - src: Ifera/ScoreHud/ScoreHud
        version: 8.0.0
-       branch: "main"
+       branch: "master"
 ...
