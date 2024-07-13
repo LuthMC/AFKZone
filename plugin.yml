@@ -1,8 +1,10 @@
 name: AFKZone
 main: Luthfi\AFKZone\Main
 author: Luthfi
-version: 2.3.0
-api: 5.17.0
+version: 2.4.0
+api: 5.0.0
+depend: ["ScoreHud"]
+
 commands:
   afkzone:
     description: Configure the AFKZone
