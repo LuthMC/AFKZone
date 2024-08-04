@@ -1,6 +1,5 @@
 <?php
 
-
 #            ______ _  __ ______                
 #      /\   |  ____| |/ /|___  /                
 #     /  \  | |__  | ' /    / / ___  _ __   ___ 
@@ -65,11 +64,11 @@ class Main extends PluginBase implements Listener {
                     if (class_exists(BedrockEconomyAPI::class)) {
                         $this->bedrockEconomyAPI = BedrockEconomyAPI::getInstance();
                     } else {
-                        $this->getLogger()->error("BedrockEconomyAPI class not found! Defaulting to EconomyAPI.");
+                        $this->getLogger()->error("BedrockEconomy not found! Defaulting to EconomyAPI.");
                         $this->economyPlugin = "EconomyAPI";
                     }
                 } else {
-                    $this->getLogger()->error("BedrockEconomy plugin not found or not enabled! Defaulting to EconomyAPI.");
+                    $this->getLogger()->error("BedrockEconomy not found or not enabled! Defaulting to EconomyAPI.");
                     $this->economyPlugin = "EconomyAPI";
                 }
                 break;
@@ -79,7 +78,7 @@ class Main extends PluginBase implements Listener {
                     $this->economyPlugin = "PocketEconomy";
                     $this->pocketEconomy = $pocketEconomy;
                 } else {
-                    $this->getLogger()->error("PocketEconomy plugin not found or not enabled! Defaulting to EconomyAPI.");
+                    $this->getLogger()->error("PocketEconomy not found or not enabled! Defaulting to EconomyAPI.");
                     $this->economyPlugin = "EconomyAPI";
                 }
                 break;
@@ -107,7 +106,7 @@ class Main extends PluginBase implements Listener {
                 return true;
             }
 
-            if (!$sender->hasPermission("afkzone.command")) {
+            if (!$sender->hasPermission("afkzone.cmd")) {
                 $sender->sendMessage("You do not have permission to use this command.");
                 return true;
             }
@@ -163,7 +162,7 @@ class Main extends PluginBase implements Listener {
         $this->afkZone['world'] = $worldName;
         $this->getConfig()->set("afk-zone.world", $worldName);
         $this->getConfig()->save();
-        $player->sendMessage("AFK zone world set to " . $worldName);
+        $player->sendMessage("AFKZone world set to " . $worldName);
     }
 
     private function setAfkZonePosition(Player $player, string $position): void {
@@ -178,7 +177,7 @@ class Main extends PluginBase implements Listener {
             $this->getConfig()->set("afk-zone.x1", $x);
             $this->getConfig()->set("afk-zone.y1", $y);
             $this->getConfig()->set("afk-zone.z1", $z);
-            $player->sendMessage("AFK zone position 1 set to X: $x, Y: $y, Z: $z");
+            $player->sendMessage("AFKZone position 1 set to X: $x, Y: $y, Z: $z");
         } elseif ($position === "2") {
             $this->afkZone['x2'] = $x;
             $this->afkZone['y2'] = $y;
@@ -186,7 +185,7 @@ class Main extends PluginBase implements Listener {
             $this->getConfig()->set("afk-zone.x2", $x);
             $this->getConfig()->set("afk-zone.y2", $y);
             $this->getConfig()->set("afk-zone.z2", $z);
-            $player->sendMessage("AFK zone position 2 set to X: $x, Y: $y, Z: $z");
+            $player->sendMessage("AFKZone position 2 set to X: $x, Y: $y, Z: $z");
         } else {
             $player->sendMessage("Invalid position. Use 1 or 2.");
             return;
@@ -249,7 +248,7 @@ class Main extends PluginBase implements Listener {
             if ($this->bedrockEconomyAPI !== null) {
                 $this->bedrockEconomyAPI->addToPlayerBalance($playerName, $amount, function (bool $success) use ($player, $amount): void {
                     if ($success) {
-                        $player->sendMessage("You have received $amount for being in the AFK zone!");
+                        $player->sendMessage("You have received $amount for being in the AFKZone!");
                     } else {
                         $player->sendMessage("Failed to add money to your account.");
                     }
@@ -258,13 +257,13 @@ class Main extends PluginBase implements Listener {
         } elseif ($this->economyPlugin === "PocketEconomy") {
             if ($this->pocketEconomy !== null) {
                 $this->pocketEconomy->addMoney($playerName, $amount);
-                $player->sendMessage("You have received $amount for being in the AFK zone!");
+                $player->sendMessage("You have received $amount for being in the AFKZone!");
             } else {
                 $player->sendMessage("Failed to add money to your account.");
             }
         } else {
             EconomyAPI::getInstance()->addMoney($player, $amount);
-            $player->sendMessage("You have received $amount for being in the AFK zone!");
+            $player->sendMessage("You have received $amount for being in the AFKZone!");
         }
     }
 
@@ -335,9 +334,9 @@ class Main extends PluginBase implements Listener {
         $config->remove("leaderboard.position.y");
         $config->remove("leaderboard.position.z");
         $config->save();
-        $player->sendMessage("AFK leaderboard position has been unset.");
+        $player->sendMessage("AFKZone leaderboard position has been unset.");
     } else {
-        $player->sendMessage("AFK leaderboard position is not set.");
+        $player->sendMessage("AFKZone leaderboard position is not set.");
     }
  }
     
