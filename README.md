@@ -13,6 +13,7 @@ You Can Customize How Much Money They Get! And Customize Worlds And Coordinates,
 | Commands | Description |
 |---------|-------------|
 | ```/afkzone``` | Commands List |
+| ```/topafk``` | See Top Afk |
 | ```/settopafk``` | Set Leaderboard |
 | ```/afkzone setworld``` | Set World For AFKZone |
 | ```/afkzone setposition 1``` | Set Position 1 |
@@ -22,6 +23,7 @@ You Can Customize How Much Money They Get! And Customize Worlds And Coordinates,
 | Permission | Description |
 |---------|-------------|
 | ```afkzone.cmd``` | Allow Player To See Command List |
+| ```afkzone.topafk``` | Allow Player To See Top Afk |
 | ```afkzone.settopafk``` | Allow Player To Set Leaderboard |
 
 ### 🔗 Download
