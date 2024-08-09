@@ -7,20 +7,23 @@ You Can Customize How Much Money They Get! And Customize Worlds And Coordinates,
 
 ### ✅ New Feature
 [+] Add UI                                                  
-[+] Add Leaderboard                                               
-[+] Add ScoreHud Tags (afkzone.time)
+[+] Add Leaderboard
 
 ### ⚙️ Commands
 | Commands | Description |
 |---------|-------------|
 | ```/afkzone``` | Commands List |
+| ```/topafk``` | See Top Afk |
 | ```/settopafk``` | Set Leaderboard |
-You can use /az commands.
+| ```/afkzone setworld``` | Set World For AFKZone |
+| ```/afkzone setposition 1``` | Set Position 1 |
+| ```/afkzone setposition 2``` | Set Position 2 |
 
 ### 🔒 Permission
 | Permission | Description |
 |---------|-------------|
 | ```afkzone.cmd``` | Allow Player To See Command List |
+| ```afkzone.topafk``` | Allow Player To See Top Afk |
 | ```afkzone.settopafk``` | Allow Player To Set Leaderboard |
 
 ### 🔗 Download
