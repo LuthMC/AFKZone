@@ -236,31 +236,38 @@ class Main extends PluginBase implements Listener {
     }
 
     private function grantMoney(Player $player): void {
-        $amount = $this->getConfig()->get("reward-amount", 1000);
-        $playerName = $player->getName();
+    $amount = $this->getConfig()->get("reward-amount", 1000);
+    $playerName = $player->getName();
 
-        if ($this->economyPlugin === "BedrockEconomy") {
-            if ($this->bedrockEconomyAPI !== null) {
-                $this->bedrockEconomyAPI->addToPlayerBalance($playerName, $amount, function (bool $success) use ($player, $amount): void {
-                    if ($success) {
-                        $player->sendMessage("You have received $amount for being in the AFKZone!");
-                    } else {
-                        $player->sendMessage("Failed to add money to your account.");
-                    }
-                });
-            }
-        } elseif ($this->economyPlugin === "PocketEconomy") {
-            if ($this->pocketEconomy !== null) {
-                $this->pocketEconomy->addMoney($playerName, $amount);
-                $player->sendMessage("You have received $amount for being in the AFKZone!");
-            } else {
-                $player->sendMessage("Failed to add money to your account.");
-            }
+    if ($this->economyPlugin === "BedrockEconomy") {
+        if ($this->bedrockEconomyAPI !== null) {
+            $this->bedrockEconomyAPI->addToPlayerBalance($playerName, $amount, function (bool $success) use ($player, $amount): void {
+                if ($success) {
+                    $player->sendMessage("You have received $amount for being in the AFKZone!");
+                } else {
+                    $player->sendMessage("Failed to add money to your account.");
+                }
+            });
         } else {
-            EconomyAPI::getInstance()->addMoney($player, $amount);
+            $player->sendMessage("BedrockEconomyAPI is not available.");
+        }
+    } elseif ($this->economyPlugin === "PocketEconomy") {
+        if ($this->pocketEconomy !== null) {
+            $this->pocketEconomy->addMoney($playerName, $amount);
             $player->sendMessage("You have received $amount for being in the AFKZone!");
+        } else {
+            $player->sendMessage("PocketEconomy is not available.");
+        }
+    } else {
+        if (class_exists('onebone\economyapi\EconomyAPI')) {
+            $economyAPI = EconomyAPI::getInstance();
+            $economyAPI->addMoney($player, $amount);
+            $player->sendMessage("You have received $amount for being in the AFKZone!");
+        } else {
+            $player->sendMessage("EconomyAPI is not available.");
         }
     }
+}
 
     private function updatePlayerTimes(): void {
         foreach ($this->playersInZone as $name => $enterTime) {
