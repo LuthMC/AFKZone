@@ -1,16 +1,5 @@
 <?php
 
-#            ______ _  __ ______                
-#      /\   |  ____| |/ /|___  /                
-#     /  \  | |__  | ' /    / / ___  _ __   ___ 
-#    / /\ \ |  __| |  <    / / / _ \| '_ \ / _ \
-#   / ____ \| |    | . \  / /_| (_) | | | |  __/
-#  /_/    \_\_|    |_|\_\/_____\___/|_| |_|\___|
-#                                               
-# © LuthMC
-#
-# Github: https://github.com/LuthMC
-
 declare(strict_types=1);
 
 namespace Luthfi\AFKZone;
@@ -269,23 +258,26 @@ class Main extends PluginBase implements Listener {
     }
 }
 
-    private function updatePlayerTimes(): void {
-        foreach ($this->playersInZone as $name => $enterTime) {
-            $player = $this->getServer()->getPlayerExact($name);
-            if ($player instanceof Player) {
-                $timeInZone = time() - $enterTime;
-                $hours = floor($timeInZone / 3600);
-                $minutes = floor(($timeInZone % 3600) / 60);
-                $seconds = $timeInZone % 60;
-                $player->sendTitle("§fAFK§bZone", "§7Time: {$hours}h {$minutes}m {$seconds}s", 0, 20, 0);
+   private function updatePlayerTimes(): void {
+    foreach ($this->playersInZone as $name => $enterTime) {
+        $player = $this->getServer()->getPlayerExact($name);
+        if ($player instanceof Player) {
+            $timeInZone = time() - $enterTime;
+            $hours = floor($timeInZone / 3600);
+            $minutes = floor(($timeInZone % 3600) / 60);
+            $seconds = $timeInZone % 60;
 
-                if ($timeInZone > 0 && $timeInZone % 60 === 0) {
-                    $this->grantMoney($player);
-                }
+            $player->sendTitle("§fAFK§bZone", "§7Time: {$hours}h {$minutes}m {$seconds}s", 0, 20, 0);
+
+            if ($timeInZone > 0 && $timeInZone % 60 === 0) {
+                $this->grantMoney($player);
             }
+        } else {
+            unset($this->playersInZone[$name]);
         }
     }
-
+}
+    
    private function showAfkZoneForm(Player $player): void {
     $form = new SimpleForm(function (Player $player, ?int $data) {
         if ($data === null) {
