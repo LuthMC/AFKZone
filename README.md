@@ -7,9 +7,9 @@ You Can Customize How Much Money They Get! And Customize Worlds And Coordinates,
 
 ### ✅ New Feature
 [+] Add UI                                                  
-[+] Add Leaderboard
-[+] Sound
-[+] ScoreHud Support (afkzone.time)
+[+] Add Leaderboard                                     
+[+] Sound                                    
+[+] ScoreHud Support (afkzone.time)                            
 
 ### ⚙️ Commands
 | Commands | Description |
