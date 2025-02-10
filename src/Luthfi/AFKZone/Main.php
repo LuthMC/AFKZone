@@ -14,6 +14,9 @@ use pocketmine\scheduler\ClosureTask;
 use pocketmine\world\particle\FloatingTextParticle;
 use pocketmine\math\Vector3;
 use pocketmine\world\World;
+use Ifera\ScoreHud\event\PlayerTagUpdateEvent;
+use Ifera\ScoreHud\scoreboard\ScoreTag;
+use Ifera\ScoreHud\ScoreHud;
 use jojoe77777\FormAPI\SimpleForm;
 use onebone\economyapi\EconomyAPI;
 use cooldogepm\bedrockeconomy\api\BedrockEconomyAPI;
@@ -25,10 +28,12 @@ class Main extends PluginBase implements Listener {
     private $economyPlugin;
     private $bedrockEconomyAPI;
     private $leaderboardParticles = [];
+    private $scoreHud;
 
     public function onEnable(): void {
         $this->saveDefaultConfig();
         $this->afkZone = $this->getConfig()->get("afk-zone", []);
+        $this->scoreHud = $this->getServer()->getPluginManager()->getPlugin("ScoreHud");
 
         $economy = $this->getConfig()->get("economy-plugin", "EconomyAPI");
         if ($economy === "BedrockEconomy") {
@@ -182,8 +187,9 @@ class Main extends PluginBase implements Listener {
                     unset($this->playersInZone[$player->getName()]);
                     $player->sendTitle("", "");
 
-                    if ($this->getServer()->getPluginManager()->getPlugin("ScoreHud") !== null) {
-                        $this->getServer()->getPluginManager()->getPlugin("ScoreHud")->removeTag($player, "afkzone.time");
+                    if ($this->scoreHud instanceof ScoreHud && $this->scoreHud->isEnabled()) {
+                        $tag = new ScoreTag("afkzone.time", "");
+                        (new PlayerTagUpdateEvent($player, $tag))->call();
                     }
                 }
             }
@@ -235,10 +241,9 @@ class Main extends PluginBase implements Listener {
                 $minutes = floor(($timeInZone % 3600) / 60);
                 $seconds = $timeInZone % 60;
 
-                if ($this->getServer()->getPluginManager()->getPlugin("ScoreHud") !== null) {
-                    $tag = "afkzone.time";
-                    $value = "Time§7:§r {$hours}h, {$minutes}m, {$seconds}s";
-                    $this->getServer()->getPluginManager()->getPlugin("ScoreHud")->addTag($player, $tag, $value);
+                if ($this->scoreHud instanceof ScoreHud && $this->scoreHud->isEnabled()) {
+                    $tag = new ScoreTag("afkzone.time", "Time§7:§r {$hours}h, {$minutes}m, {$seconds}s");
+                    (new PlayerTagUpdateEvent($player, $tag))->call();
                 }
                 
                 $player->sendTitle("§bAFK§eZone", "§7Time: {$hours}h {$minutes}m {$seconds}s", 0, 20, 0);
