@@ -181,6 +181,10 @@ class Main extends PluginBase implements Listener {
                 if (isset($this->playersInZone[$player->getName()])) {
                     unset($this->playersInZone[$player->getName()]);
                     $player->sendTitle("", "");
+
+                    if ($this->getServer()->getPluginManager()->getPlugin("ScoreHud") !== null) {
+                        $this->getServer()->getPluginManager()->getPlugin("ScoreHud")->removeTag($player, "afkzone.time");
+                    }
                 }
             }
         }
@@ -208,7 +212,8 @@ class Main extends PluginBase implements Listener {
             if ($this->bedrockEconomyAPI !== null) {
                 $this->bedrockEconomyAPI->addToPlayerBalance($player->getName(), $amount, function (bool $success) use ($player, $amount): void {
                     if ($success) {
-                        $player->sendMessage("You have received $amount for being in the AFK zone!");
+                        $player->sendMessage("You have received $amount for being in the AFKZone!");
+                        $player->getWorld()->addSound($player->getPosition(), new \pocketmine\world\sound\PopSound());
                     } else {
                         $player->sendMessage("Failed to add money to your account.");
                     }
@@ -216,7 +221,8 @@ class Main extends PluginBase implements Listener {
             }
         } else {
             EconomyAPI::getInstance()->addMoney($player, $amount);
-            $player->sendMessage("You have received $amount for being in the AFK zone!");
+            $player->sendMessage("You have received $amount for being in the AFKZone!");
+            $player->getWorld()->addSound($player->getPosition(), new \pocketmine\world\sound\PopSound());
         }
     }
 
@@ -228,7 +234,14 @@ class Main extends PluginBase implements Listener {
                 $hours = floor($timeInZone / 3600);
                 $minutes = floor(($timeInZone % 3600) / 60);
                 $seconds = $timeInZone % 60;
-                $player->sendTitle("AFK Â§eZone", "Â§7Time: {$hours}h {$minutes}m {$seconds}s", 0, 20, 0);
+
+                if ($this->getServer()->getPluginManager()->getPlugin("ScoreHud") !== null) {
+                    $tag = "afkzone.time";
+                    $value = "Time§7:§r {$hours}h, {$minutes}m, {$seconds}s";
+                    $this->getServer()->getPluginManager()->getPlugin("ScoreHud")->addTag($player, $tag, $value);
+                }
+                
+                $player->sendTitle("§bAFK§eZone", "§7Time: {$hours}h {$minutes}m {$seconds}s", 0, 20, 0);
 
                 if ($timeInZone > 0 && $timeInZone % 60 === 0) {
                     $this->grantMoney($player);
@@ -323,7 +336,7 @@ class Main extends PluginBase implements Listener {
         $index = 0;
         foreach ($topPlayers as $name => $time) {
             $timeText = gmdate("H:i:s", $time);
-            $text = "Â§e{$name}: Â§7{$timeText}";
+            $text = "§e{$name}: §7{$timeText}";
 
             $position = $basePosition->add(0, $index * 1.5, 0);
             $particle = new FloatingTextParticle($text);
