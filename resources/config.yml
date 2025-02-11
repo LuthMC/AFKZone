@@ -1,3 +1,7 @@
+# AFKZone Settings
+
+economy-plugin: "BedrockEconomy" # EconomyAPI or BedrockEconomy
+
 afk-zone:
   world: ""
   x1: 0
@@ -6,5 +10,12 @@ afk-zone:
   x2: 0
   y2: 0
   z2: 0
-reward-amount: 1000
-economy-plugin: "BedrockEconomy" # EconomyAPI or BedrockEconomy
+
+rewards:
+  - type: "money"
+    amount: 1000
+  - type: "item"
+    item: "diamond"
+    amount: 1
+  - type: "command"
+    command: "give {player} diamond 1"
