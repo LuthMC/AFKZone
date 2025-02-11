@@ -10,7 +10,7 @@ commands:
     description: Configure the AFKZone
     usage: /afkzone <ui|setworld|setposition>
     aliases: [az]
-    permission: afkzone.cmd
+    permission: afkzone.command
   settopafk:
     description: Allow to set leaderboard
     permission: afkzone.settopafk
@@ -18,12 +18,12 @@ commands:
     description: Allow player to see top afk
     permission: afkzone.topafk
 permissions:
-  afkzone.cmd:
-    description: Allows the player to configure the AFKZone
+  afkzone.command:
+    description: Allow player to configure the AFKZone
     default: op
   afkzone.settopafk:
-    description: Allows the player to configure the AFKZone Leaderboard
+    description: Allow player to set Leaderboard
     default: op
   afkzone.topafk:
-    description: Allows the player see top afk
+    description: Allow player to see top afk
     default: true

@@ -47,7 +47,7 @@ class Main extends PluginBase implements Listener {
                     $this->economyPlugin = "EconomyAPI";
                 }
             } else {
-                $this->getLogger()->error("BedrockEconomy plugin not found or not enabled! Defaulting to EconomyAPI.");
+                $this->getLogger()->error("BedrockEconomy not found or not enabled! Defaulting to EconomyAPI.");
                 $this->economyPlugin = "EconomyAPI";
             }
         } else {
@@ -129,7 +129,7 @@ class Main extends PluginBase implements Listener {
         $this->afkZone['world'] = $worldName;
         $this->getConfig()->set("afk-zone.world", $worldName);
         $this->getConfig()->save();
-        $player->sendMessage("AFK zone world set to " . $worldName);
+        $player->sendMessage("AFKZone world set to " . $worldName);
     }
 
     private function setAfkZonePosition(Player $player, string $position): void {
@@ -144,7 +144,7 @@ class Main extends PluginBase implements Listener {
             $this->getConfig()->set("afk-zone.x1", $x);
             $this->getConfig()->set("afk-zone.y1", $y);
             $this->getConfig()->set("afk-zone.z1", $z);
-            $player->sendMessage("AFK zone position 1 set to X: $x, Y: $y, Z: $z");
+            $player->sendMessage("AFKZone position 1 set to X: $x, Y: $y, Z: $z");
         } elseif ($position === "2") {
             $this->afkZone['x2'] = $x;
             $this->afkZone['y2'] = $y;
@@ -152,7 +152,7 @@ class Main extends PluginBase implements Listener {
             $this->getConfig()->set("afk-zone.x2", $x);
             $this->getConfig()->set("afk-zone.y2", $y);
             $this->getConfig()->set("afk-zone.z2", $z);
-            $player->sendMessage("AFK zone position 2 set to X: $x, Y: $y, Z: $z");
+            $player->sendMessage("AFKZone position 2 set to X: $x, Y: $y, Z: $z");
         } else {
             $player->sendMessage("Invalid position. Use 1 or 2.");
             return;
@@ -213,25 +213,48 @@ class Main extends PluginBase implements Listener {
     }
 
     private function grantMoney(Player $player): void {
-        $amount = $this->getConfig()->get("reward-amount", 1000);
-        if ($this->economyPlugin === "BedrockEconomy") {
-            if ($this->bedrockEconomyAPI !== null) {
-                $this->bedrockEconomyAPI->addToPlayerBalance($player->getName(), $amount, function (bool $success) use ($player, $amount): void {
-                    if ($success) {
+        $this->grantRewards($player);
+    }
+    
+    private function grantRewards(Player $player): void {
+        $rewards = $this->getConfig()->get("rewards", []);
+        foreach ($rewards as $reward) {
+            switch ($reward["type"]) {
+                case "money":
+                    $amount = $reward["amount"];
+                    if ($this->economyPlugin === "BedrockEconomy") {
+                        if ($this->bedrockEconomyAPI !== null) {
+                            $this->bedrockEconomyAPI->addToPlayerBalance($player->getName(), $amount, function (bool $success) use ($player, $amount): void {
+                                if ($success) {
+                                    $player->sendMessage("You have received $amount for being in the AFKZone!");
+                                    $player->getWorld()->addSound($player->getPosition(), new \pocketmine\world\sound\PopSound());
+                                } else {
+                                    $player->sendMessage("Failed to add money to your account.");
+                                }
+                            });
+                        }
+                    } else {
+                        EconomyAPI::getInstance()->addMoney($player, $amount);
                         $player->sendMessage("You have received $amount for being in the AFKZone!");
                         $player->getWorld()->addSound($player->getPosition(), new \pocketmine\world\sound\PopSound());
-                    } else {
-                        $player->sendMessage("Failed to add money to your account.");
                     }
-                });
+                    break;
+                case "item":
+                    $itemId = $reward["item"];
+                    $amount = $reward["amount"];
+                    $item = \pocketmine\item\ItemFactory::getInstance()->get($itemId, 0, $amount);
+                    $player->getInventory()->addItem($item);
+                    $player->sendMessage("You have received $amount x $itemId for being in the AFKZone!");
+                    break;
+                case "command":
+                    $command = str_replace("{player}", $player->getName(), $reward["command"]);
+                    $this->getServer()->dispatchCommand(new \pocketmine\command\ConsoleCommandSender(), $command);
+                    $player->sendMessage("You have received a command reward for being in the AFKZone!");
+                    break;
             }
-        } else {
-            EconomyAPI::getInstance()->addMoney($player, $amount);
-            $player->sendMessage("You have received $amount for being in the AFKZone!");
-            $player->getWorld()->addSound($player->getPosition(), new \pocketmine\world\sound\PopSound());
         }
     }
-
+    
     private function updatePlayerTimes(): void {
         foreach ($this->playersInZone as $name => $enterTime) {
             $player = $this->getServer()->getPlayerExact($name);
@@ -305,9 +328,9 @@ class Main extends PluginBase implements Listener {
         $config->remove("leaderboard.position.y");
         $config->remove("leaderboard.position.z");
         $config->save();
-        $player->sendMessage("AFK leaderboard position has been unset.");
+        $player->sendMessage("Leaderboard position has been unset.");
     } else {
-        $player->sendMessage("AFK leaderboard position is not set.");
+        $player->sendMessage("Leaderboard position is not set.");
     }
  }
     
