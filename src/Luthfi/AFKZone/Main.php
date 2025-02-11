@@ -129,7 +129,7 @@ class Main extends PluginBase implements Listener {
         $this->afkZone['world'] = $worldName;
         $this->getConfig()->set("afk-zone.world", $worldName);
         $this->getConfig()->save();
-        $player->sendMessage("AFK zone world set to " . $worldName);
+        $player->sendMessage("AFKZone world set to " . $worldName);
     }
 
     private function setAfkZonePosition(Player $player, string $position): void {
@@ -144,7 +144,7 @@ class Main extends PluginBase implements Listener {
             $this->getConfig()->set("afk-zone.x1", $x);
             $this->getConfig()->set("afk-zone.y1", $y);
             $this->getConfig()->set("afk-zone.z1", $z);
-            $player->sendMessage("AFK zone position 1 set to X: $x, Y: $y, Z: $z");
+            $player->sendMessage("AFKZone position 1 set to X: $x, Y: $y, Z: $z");
         } elseif ($position === "2") {
             $this->afkZone['x2'] = $x;
             $this->afkZone['y2'] = $y;
@@ -152,7 +152,7 @@ class Main extends PluginBase implements Listener {
             $this->getConfig()->set("afk-zone.x2", $x);
             $this->getConfig()->set("afk-zone.y2", $y);
             $this->getConfig()->set("afk-zone.z2", $z);
-            $player->sendMessage("AFK zone position 2 set to X: $x, Y: $y, Z: $z");
+            $player->sendMessage("AFKZone position 2 set to X: $x, Y: $y, Z: $z");
         } else {
             $player->sendMessage("Invalid position. Use 1 or 2.");
             return;
@@ -328,9 +328,9 @@ class Main extends PluginBase implements Listener {
         $config->remove("leaderboard.position.y");
         $config->remove("leaderboard.position.z");
         $config->save();
-        $player->sendMessage("AFK leaderboard position has been unset.");
+        $player->sendMessage("Leaderboard position has been unset.");
     } else {
-        $player->sendMessage("AFK leaderboard position is not set.");
+        $player->sendMessage("Leaderboard position is not set.");
     }
  }
     
