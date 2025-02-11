@@ -47,7 +47,7 @@ class Main extends PluginBase implements Listener {
                     $this->economyPlugin = "EconomyAPI";
                 }
             } else {
-                $this->getLogger()->error("BedrockEconomy plugin not found or not enabled! Defaulting to EconomyAPI.");
+                $this->getLogger()->error("BedrockEconomy not found or not enabled! Defaulting to EconomyAPI.");
                 $this->economyPlugin = "EconomyAPI";
             }
         } else {
@@ -213,25 +213,48 @@ class Main extends PluginBase implements Listener {
     }
 
     private function grantMoney(Player $player): void {
-        $amount = $this->getConfig()->get("reward-amount", 1000);
-        if ($this->economyPlugin === "BedrockEconomy") {
-            if ($this->bedrockEconomyAPI !== null) {
-                $this->bedrockEconomyAPI->addToPlayerBalance($player->getName(), $amount, function (bool $success) use ($player, $amount): void {
-                    if ($success) {
+        $this->grantRewards($player);
+    }
+    
+    private function grantRewards(Player $player): void {
+        $rewards = $this->getConfig()->get("rewards", []);
+        foreach ($rewards as $reward) {
+            switch ($reward["type"]) {
+                case "money":
+                    $amount = $reward["amount"];
+                    if ($this->economyPlugin === "BedrockEconomy") {
+                        if ($this->bedrockEconomyAPI !== null) {
+                            $this->bedrockEconomyAPI->addToPlayerBalance($player->getName(), $amount, function (bool $success) use ($player, $amount): void {
+                                if ($success) {
+                                    $player->sendMessage("You have received $amount for being in the AFKZone!");
+                                    $player->getWorld()->addSound($player->getPosition(), new \pocketmine\world\sound\PopSound());
+                                } else {
+                                    $player->sendMessage("Failed to add money to your account.");
+                                }
+                            });
+                        }
+                    } else {
+                        EconomyAPI::getInstance()->addMoney($player, $amount);
                         $player->sendMessage("You have received $amount for being in the AFKZone!");
                         $player->getWorld()->addSound($player->getPosition(), new \pocketmine\world\sound\PopSound());
-                    } else {
-                        $player->sendMessage("Failed to add money to your account.");
                     }
-                });
+                    break;
+                case "item":
+                    $itemId = $reward["item"];
+                    $amount = $reward["amount"];
+                    $item = \pocketmine\item\ItemFactory::getInstance()->get($itemId, 0, $amount);
+                    $player->getInventory()->addItem($item);
+                    $player->sendMessage("You have received $amount x $itemId for being in the AFKZone!");
+                    break;
+                case "command":
+                    $command = str_replace("{player}", $player->getName(), $reward["command"]);
+                    $this->getServer()->dispatchCommand(new \pocketmine\command\ConsoleCommandSender(), $command);
+                    $player->sendMessage("You have received a command reward for being in the AFKZone!");
+                    break;
             }
-        } else {
-            EconomyAPI::getInstance()->addMoney($player, $amount);
-            $player->sendMessage("You have received $amount for being in the AFKZone!");
-            $player->getWorld()->addSound($player->getPosition(), new \pocketmine\world\sound\PopSound());
         }
     }
-
+    
     private function updatePlayerTimes(): void {
         foreach ($this->playersInZone as $name => $enterTime) {
             $player = $this->getServer()->getPlayerExact($name);
