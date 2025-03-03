@@ -1,29 +1,17 @@
 name: AFKZone
-main: Luthfi\AFKZone\Main
+main: Luthfi\AFKZone\AFKZone
 author: Luthfi
-version: 2.4.0
+version: 3.0.0
 api: 5.0.0
 depend: ["ScoreHud"]
 website: https://github.com/LuthMC/AFKZone
 commands:
   afkzone:
     description: Configure the AFKZone
-    usage: /afkzone <ui|setworld|setposition>
+    usage: /afkzone <wand|create|delete|ui>
     aliases: [az]
-    permission: afkzone.command
-  settopafk:
-    description: Allow to set leaderboard
-    permission: afkzone.settopafk
-  topafk:
-    description: Allow player to see top afk
-    permission: afkzone.topafk
+    permission: afkzone.cmd
 permissions:
-  afkzone.command:
+  afkzone.cmd:
     description: Allow player to configure the AFKZone
     default: op
-  afkzone.settopafk:
-    description: Allow player to set Leaderboard
-    default: op
-  afkzone.topafk:
-    description: Allow player to see top afk
-    default: true
