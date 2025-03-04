@@ -1,21 +1,27 @@
-# AFKZone Settings
+# AFKZone Configuration
 
-economy-plugin: "BedrockEconomy" # EconomyAPI or BedrockEconomy
+# Economy Settings
+economy-plugin: "BedrockEconomy" # (EconomyAPI or BedrockEconomy)
 
-afk-zone:
-  world: ""
-  x1: 0
-  y1: 0
-  z1: 0
-  x2: 0
-  y2: 0
-  z2: 0
-
+# Reward Settings
 rewards:
-  - type: "money"
-    amount: 1000
-  - type: "item"
-    item: "diamond"
-    amount: 1
-  - type: "command"
-    command: "give {player} diamond 1"
+  timer: 1 # (in minute)
+  rewards:
+    - type: "money"
+      amount: 1000
+    - type: "item"
+      item: "diamond"
+      amount: 1
+    - type: "command"
+      command: "give {player} diamond 1"
+
+# Sound Settings
+# These are the sounds played when entering/leaving an afkzone
+sounds:
+  enter: "pop"
+  leave: "pop"
+
+# Particle Settings
+# Particles shown when rewards are given
+particles:
+  reward: "heart"
