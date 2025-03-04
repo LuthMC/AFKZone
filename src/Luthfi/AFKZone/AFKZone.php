@@ -15,6 +15,7 @@ use pocketmine\event\player\PlayerQuitEvent;
 use pocketmine\player\Player;
 use pocketmine\plugin\PluginBase;
 use pocketmine\utils\Config;
+use pocketmine\item\VanillaItems;
 use pocketmine\math\Vector3;
 use pocketmine\world\Position;
 use pocketmine\world\sound\PopSound;
@@ -282,7 +283,7 @@ class Main extends PluginBase implements Listener {
             }
         });
         
-        $form->setTitle("AFKZone Management");
+        $form->setTitle("AFKZone Settings");
         $form->setContent("Select an option below:");
         
         if ($player->hasPermission("afkzone.cmd")) {
