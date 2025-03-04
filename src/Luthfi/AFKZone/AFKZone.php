@@ -708,5 +708,4 @@ class FloatingTextEntity extends \pocketmine\entity\Entity {
         $this->setNameTag($text);
         $this->sendData($this->getViewers());
     }
-  }
 }
