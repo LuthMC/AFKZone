@@ -45,19 +45,13 @@ class Main extends PluginBase implements Listener {
     private array $playerSelection = [];
     
     /** @var array */
-    private array $afkPlayers = [];
-    
-    /** @var array */
     private array $floatingTexts = [];
     
     /** @var string */
     private string $economyPlugin = "";
-    
+
     /** @var mixed */
-    private $economy = null;
-    
-    /** @var array */
-    private array $scorehudTags = [];
+    private $bedrockEconomyAPI = null;
 
     protected function onEnable(): void {
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
@@ -556,12 +550,18 @@ class Main extends PluginBase implements Listener {
         if ($amount <= 0) {
             return;
         }
-        
+
         if ($this->economyPlugin === "BedrockEconomy") {
             $bedrockEconomy = $this->getServer()->getPluginManager()->getPlugin("BedrockEconomy");
             if ($bedrockEconomy !== null) {
-                $bedrockEconomy->addMoney($player->getName(), $amount);
-                $player->sendMessage(TF::GREEN . "You received $" . number_format($amount) . " for staying in the AFKZone!");
+                $this->bedrockEconomyAPI = $bedrockEconomy->getAPI();
+                $this->bedrockEconomyAPI->addToPlayerBalance($player->getName(), $amount, function (bool $success) use ($player, $amount): void {
+                    if ($success) {
+                        $player->sendMessage(TF::GREEN . "You received $" . number_format($amount) . " for staying in the AFKZone!");
+                    } else {
+                        $player->sendMessage(TF::RED . "Failed to add money. Please contact an administrator.");
+                    }
+                });
             }
         } elseif ($this->economyPlugin === "EconomyAPI") {
             $economyAPI = $this->getServer()->getPluginManager()->getPlugin("EconomyAPI");
@@ -569,6 +569,8 @@ class Main extends PluginBase implements Listener {
                 $economyAPI->addMoney($player, $amount);
                 $player->sendMessage(TF::GREEN . "You received $" . number_format($amount) . " for staying in the AFKZone!");
             }
+        } else {
+            $player->sendMessage(TF::RED . "Economy plugin not found. Money rewards are disabled.");
         }
     }
 
@@ -700,12 +702,20 @@ class FloatingTextEntity extends \pocketmine\entity\Entity {
         $this->text = $text;
         $this->setNameTag($text);
         $this->setNameTagAlwaysVisible(true);
-        $this->setScale(0.01); // Make it invisible but functional
+        $this->setScale(0.01);
     }
 
     public function setText(string $text): void {
         $this->text = $text;
         $this->setNameTag($text);
         $this->sendData($this->getViewers());
+    }
+
+    public function getInitialDragMultiplier(): float {
+        return 0.02;
+    }
+
+    public function getInitialGravity(): float {
+        return 0.08;
     }
 }
