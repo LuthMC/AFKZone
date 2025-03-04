@@ -492,10 +492,66 @@ class Main extends PluginBase implements Listener {
             return;
         }
         
-        $pos1 = $zoneData["pos1"];
-        $pos2 = $zoneData["pos2"];
+        $pos1 = new Vector3($zoneData["pos1"][0], $zoneData["pos1"][1], $zoneData["pos1"][2]);
+        $pos2 = new Vector3($zoneData["pos2"][0], $zoneData["pos2"][1], $zoneData["pos2"][2]);
+
+        $center = new Vector3(
+            ($pos1->getX() + $pos2->getX()) / 2,
+            ($pos1->getY() + $pos2->getY()) / 2,
+            ($pos1->getZ() + $pos2->getZ()) / 2
+        );
+
+        $player->teleport($center);
+        $player->sendMessage(TF::GREEN . "You have been teleported to the AFKZone '$zoneName'.");
     }
 
+    private function updatePlayerAFKTimes(): void {
+        foreach ($this->getServer()->getOnlinePlayers() as $player) {
+            $playerName = $player->getName();
+
+            if ($this->isInAFKZone($player)) {
+                $this->playerAFKTimes[$playerName] = ($this->playerAFKTimes[$playerName] ?? 0) + 1;
+            }
+        }
+    }
+
+    private function isInAFKZone(Player $player): bool {
+        foreach ($this->afkZones->getAll() as $zoneData) {
+            $world = $this->getServer()->getWorldManager()->getWorldByName($zoneData["world"]);
+
+            if ($world === null || $player->getWorld() !== $world) {
+                continue;
+            }
+
+            $pos1 = new Vector3($zoneData["pos1"][0], $zoneData["pos1"][1], $zoneData["pos1"][2]);
+            $pos2 = new Vector3($zoneData["pos2"][0], $zoneData["pos2"][1], $zoneData["pos2"][2]);
+            $playerPos = $player->getPosition();
+
+            if (
+                $playerPos->x >= min($pos1->x, $pos2->x) && $playerPos->x <= max($pos1->x, $pos2->x) &&
+                $playerPos->y >= min($pos1->y, $pos2->y) && $playerPos->y <= max($pos1->y, $pos2->y) &&
+                $playerPos->z >= min($pos1->z, $pos2->z) && $playerPos->z <= max($pos1->z, $pos2->z)
+            ) {
+                return true;
+            }
+        }
+ 
+        return false;
+    }
+
+    private function checkRewards(): void {
+        foreach ($this->getServer()->getOnlinePlayers() as $player) {
+            $playerName = $player->getName();
+
+            if ($this->isInAFKZone($player)) {
+                $time = $this->playerAFKTimes[$playerName] ?? 0;
+                if ($time % 60 === 0) {
+                    $this->giveMoney($player, 1);
+                }
+            }
+        }
+    }
+    
     private function giveMoney(Player $player, int $amount): void {
         if ($amount <= 0) {
             return;
@@ -504,7 +560,7 @@ class Main extends PluginBase implements Listener {
         if ($this->economyPlugin === "BedrockEconomy") {
             $bedrockEconomy = $this->getServer()->getPluginManager()->getPlugin("BedrockEconomy");
             if ($bedrockEconomy !== null) {
-                $bedrockEconomy->giveMoney($player, $amount);
+                $bedrockEconomy->addMoney($player->getName(), $amount);
                 $player->sendMessage(TF::GREEN . "You received $" . number_format($amount) . " for staying in the AFKZone!");
             }
         } elseif ($this->economyPlugin === "EconomyAPI") {
@@ -514,6 +570,14 @@ class Main extends PluginBase implements Listener {
                 $player->sendMessage(TF::GREEN . "You received $" . number_format($amount) . " for staying in the AFKZone!");
             }
         }
+    }
+
+    private function formatTime(int $seconds): string {
+        $hours = intdiv($seconds, 3600);
+        $minutes = intdiv($seconds % 3600, 60);
+        $seconds = $seconds % 60;
+
+        return sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds);
     }
     
     private function loadFloatingTexts(): void {
@@ -628,37 +692,21 @@ class ScoreHudListener implements Listener {
     }
 }
 
-class FloatingTextEntity {
-    
-    /** @var Vector3 */
-    private Vector3 $position;
-    
-    /** @var string */
-    private string $text;
-    
-    /** @var \pocketmine\world\World */
-    private \pocketmine\world\World $world;
-    
-    /** @var int */
-    private int $entityId;
-    
+class FloatingTextEntity extends \pocketmine\entity\Entity {
+    protected string $text;
+
     public function __construct(Vector3 $position, string $text, \pocketmine\world\World $world) {
-        $this->position = $position;
+        parent::__construct($position, $world);
         $this->text = $text;
-        $this->world = $world;
-        $this->entityId = \pocketmine\entity\Entity::nextRuntimeId();
-        
-        $this->spawnToAll();
+        $this->setNameTag($text);
+        $this->setNameTagAlwaysVisible(true);
+        $this->setScale(0.01); // Make it invisible but functional
     }
-    
-    public function spawnToAll(): void {
-        foreach ($this->world->getPlayers() as $player) {
-            $this->spawnTo($player);
-        }
-    }
-    
+
     public function setText(string $text): void {
         $this->text = $text;
-        $this->spawnToAll();
+        $this->setNameTag($text);
+        $this->sendData($this->getViewers());
     }
+  }
 }
