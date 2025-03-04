@@ -12,7 +12,6 @@ use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerMoveEvent;
 use pocketmine\event\player\PlayerQuitEvent;
-use pocketmine\item\VanillaItems;
 use pocketmine\player\Player;
 use pocketmine\plugin\PluginBase;
 use pocketmine\utils\Config;
@@ -514,45 +513,6 @@ class Main extends PluginBase implements Listener {
                 $player->sendMessage(TF::GREEN . "You received $" . number_format($amount) . " for staying in the AFKZone!");
             }
         }
-    }
-    
-    private function giveItem(Player $player, string $itemName, int $amount): void {
-        if (empty($itemName) || $amount <= 0) {
-            return;
-        }
-        
-        $item = null;
-        switch (strtolower($itemName)) {
-            case "diamond":
-                $item = VanillaItems::DIAMOND()->setCount($amount);
-                break;
-                
-            case "iron_ingot":
-                $item = VanillaItems::IRON_INGOT()->setCount($amount);
-                break;
-                
-            case "gold_ingot":
-                $item = VanillaItems::GOLD_INGOT()->setCount($amount);
-                break;
-                
-            case "emerald":
-                $item = VanillaItems::EMERALD()->setCount($amount);
-                break;
-        }
-        
-        if ($item !== null) {
-            $player->getInventory()->addItem($item);
-            $player->sendMessage(TF::GREEN . "You received " . $amount . "x " . $itemName . " for staying in the AFK Zone!");
-        }
-    }
-    
-    private function executeCommand(Player $player, string $command): void {
-        if (empty($command)) {
-            return;
-        }
-        
-        $command = str_replace("{player}", $player->getName(), $command);
-        $this->getServer()->dispatchCommand(new \pocketmine\console\ConsoleCommandSender($this->getServer(), $this->getServer()->getLanguage()), $command);
     }
     
     private function loadFloatingTexts(): void {
