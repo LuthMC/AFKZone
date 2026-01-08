@@ -1,0 +1,17 @@
+name: AFKZone
+main: LuthMC\AFKZone\Main
+author: LuthMC
+version: 3.0.1
+api: 5.0.0
+depend: ["ScoreHud"]
+website: https://github.com/LuthMC/AFKZone
+commands:
+  afkzone:
+    description: Configure the AFKZone
+    usage: /afkzone <pos1|pos2|create|delete|ui|list>
+    aliases: [az]
+    permission: afkzone.cmd
+permissions:
+  afkzone.cmd:
+    description: Allow player to configure the AFKZone
+    default: op

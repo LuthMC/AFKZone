@@ -1,0 +1,14 @@
+# AFKZone Configuration
+
+# Reward Settings
+rewards:
+  timer: 60
+  money: 100
+
+# Reward Items (given when timer expires)
+reward-items:
+  enabled: true
+  amount: 1
+  items:
+    - "diamond"
+    - "gold_ingot"
