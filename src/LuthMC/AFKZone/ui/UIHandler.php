@@ -172,20 +172,207 @@ class UIHandler {
                     break;
 
                 case 1:
+                    $this->openZoneRewardsUI($player, $zoneName);
+                    break;
+
+                case 2:
                     $zoneManager->deleteZone($zoneName);
                     $player->sendMessage(TF::GREEN . "AFKZone '$zoneName' has been deleted.");
                     $this->openZoneListUI($player);
                     break;
 
-                case 2:
+                case 3:
                     $this->openZoneListUI($player);
                     break;
             }
         });
 
         $form->addButton("Teleport to AFKZone");
+        $form->addButton("Configure Rewards");
         $form->addButton("Delete AFKZone");
         $form->addButton("Back to List");
+
+        $player->sendForm($form);
+    }
+
+    public function openZoneRewardsUI(Player $player, string $zoneName): void {
+        $zoneManager = $this->plugin->getZoneManager();
+        $rewards = $zoneManager->getZoneRewards($zoneName);
+        $money = $rewards["money"] ?? 100;
+        $items = $rewards["items"] ?? [];
+
+        $form = new SimpleForm("Configure Rewards: $zoneName", "Choose what to customize:", function (Player $player, ?int $data) use ($zoneName) {
+            if ($data === null) {
+                $this->openZoneDetailsUI($player, $zoneName);
+                return;
+            }
+
+            switch ($data) {
+                case 0:
+                    $this->openMoneyRewardUI($player, $zoneName);
+                    break;
+
+                case 1:
+                    $this->openItemRewardUI($player, $zoneName);
+                    break;
+
+                case 2:
+                    $this->openZoneDetailsUI($player, $zoneName);
+                    break;
+            }
+        });
+
+        $form->addButton("Money Rewards");
+        $form->addButton("Item Rewards");
+        $form->addButton("Back");
+
+        $player->sendForm($form);
+    }
+
+    public function openMoneyRewardUI(Player $player, string $zoneName): void {
+        $zoneManager = $this->plugin->getZoneManager();
+        $rewards = $zoneManager->getZoneRewards($zoneName);
+        $money = $rewards["money"] ?? 100;
+
+        $form = new CustomForm("Money Reward: $zoneName", function (Player $player, ?array $data) use ($zoneName) {
+            if ($data === null) {
+                $this->openZoneRewardsUI($player, $zoneName);
+                return;
+            }
+
+            $zoneManager = $this->plugin->getZoneManager();
+            $money = (int)($data[0] ?? 100);
+            if ($money === 0) {
+                $money = 100;
+            }
+
+            if ($money < 0) {
+                $player->sendMessage(TF::RED . "Money reward cannot be negative!");
+                return;
+            }
+
+            $rewards = $zoneManager->getZoneRewards($zoneName);
+            $items = $rewards["items"] ?? [];
+            $zoneManager->setZoneRewards($zoneName, $money, $items);
+            $player->sendMessage(TF::GREEN . "Money reward updated to: " . TF::YELLOW . "$money");
+            $this->openZoneRewardsUI($player, $zoneName);
+        });
+
+        $form->addInput("Money Rewards", "100", (string)$money);
+        $player->sendForm($form);
+    }
+
+    public function openItemRewardUI(Player $player, string $zoneName): void {
+        $form = new SimpleForm("Item Rewards: $zoneName", "Customize item reward:", function (Player $player, ?int $data) use ($zoneName) {
+            if ($data === null) {
+                $this->openZoneRewardsUI($player, $zoneName);
+                return;
+            }
+
+            switch ($data) {
+                case 0:
+                    $this->openAddItemRewardUI($player, $zoneName);
+                    break;
+
+                case 1:
+                    $this->openRemoveItemRewardUI($player, $zoneName);
+                    break;
+
+                case 2:
+                    $this->openZoneRewardsUI($player, $zoneName);
+                    break;
+            }
+        });
+
+        $form->addButton("Add Item Reward");
+        $form->addButton("Remove Item Reward");
+        $form->addButton("Back");
+
+        $player->sendForm($form);
+    }
+
+    public function openAddItemRewardUI(Player $player, string $zoneName): void {
+        $form = new CustomForm("Add Item Reward: $zoneName", function (Player $player, ?array $data) use ($zoneName) {
+            if ($data === null) {
+                $this->openItemRewardUI($player, $zoneName);
+                return;
+            }
+
+            $itemName = trim($data[0] ?? "");
+            $amount = (int)($data[1] ?? 1);
+            if ($amount === 0) {
+                $amount = 1;
+            }
+
+            if (empty($itemName)) {
+                $player->sendMessage(TF::RED . "Item name cannot be empty!");
+                return;
+            }
+
+            if ($amount < 1) {
+                $player->sendMessage(TF::RED . "Amount must be at least 1!");
+                return;
+            }
+
+            $zoneManager = $this->plugin->getZoneManager();
+            $rewards = $zoneManager->getZoneRewards($zoneName);
+            $items = $rewards["items"] ?? [];
+            $money = $rewards["money"] ?? 100;
+
+            $items[] = [
+                "item" => strtolower(str_replace(" ", "_", $itemName)),
+                "amount" => $amount
+            ];
+
+            $zoneManager->setZoneRewards($zoneName, $money, $items);
+            $player->sendMessage(TF::GREEN . "Item reward added: " . TF::YELLOW . "$itemName x$amount");
+            $this->openItemRewardUI($player, $zoneName);
+        });
+
+        $form->addInput("Item Name", "diamond", "");
+        $form->addInput("Amount", "1", "");
+        $player->sendForm($form);
+    }
+
+    public function openRemoveItemRewardUI(Player $player, string $zoneName): void {
+        $zoneManager = $this->plugin->getZoneManager();
+        $rewards = $zoneManager->getZoneRewards($zoneName);
+        $items = $rewards["items"] ?? [];
+
+        if (empty($items)) {
+            $player->sendMessage(TF::YELLOW . "This zone has no custom item rewards.");
+            $this->openItemRewardUI($player, $zoneName);
+            return;
+        }
+
+        $form = new SimpleForm("Remove Item Reward: $zoneName", "Select item to remove:", function (Player $player, ?int $data) use ($zoneName, $items) {
+            if ($data === null) {
+                $this->openItemRewardUI($player, $zoneName);
+                return;
+            }
+
+            if (!isset($items[$data])) {
+                $this->openItemRewardUI($player, $zoneName);
+                return;
+            }
+
+            $zoneManager = $this->plugin->getZoneManager();
+            $rewards = $zoneManager->getZoneRewards($zoneName);
+            $money = $rewards["money"] ?? 100;
+
+            unset($items[$data]);
+            $items = array_values($items);
+
+            $zoneManager->setZoneRewards($zoneName, $money, $items);
+            $player->sendMessage(TF::GREEN . "Item reward removed!");
+            $this->openItemRewardUI($player, $zoneName);
+        });
+
+        foreach ($items as $itemData) {
+            $itemName = $itemData["item"] ?? "unknown";
+            $amount = $itemData["amount"] ?? 1;
+            $form->addButton("$itemName x$amount");
+        }
 
         $player->sendForm($form);
     }

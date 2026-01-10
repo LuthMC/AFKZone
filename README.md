@@ -1,4 +1,4 @@
-# AFKZone V3 (3.0.1)
+# AFKZone V3 (3.0.2)
 [![](https://poggit.pmmp.io/shield.state/AFKZone)](https://poggit.pmmp.io/p/AFKZone) [![](https://poggit.pmmp.io/shield.dl/AFKZone)](https://poggit.pmmp.io/p/AFKZone) [![GitHub contributors](https://img.shields.io/github/contributors/LuthMC/AFKZone)](https://github.com/LuthMC/AFKZone/graphs/contributors)
 ### 💡 Feature                           
 • Multiple Zones                                                             
@@ -23,7 +23,12 @@
 ### 🔒 Permission
 | Permission | Description |
 |---------|-------------|
-| ```afkzone.cmd``` | Allow player to use all AFKZone commands |
+| ```afkzone.cmd``` | Allow player to use all afkzone commands |
+
+### 📍  ScoreHud Tags
+| Tags | Description |
+|---------|-------------|
+| ```afkzone.time``` | Show time when stay in afkzone |
 
 ### 🔗 Download
 | [Release](https://poggit.pmmp.io/p/AFKZone)                                                                              

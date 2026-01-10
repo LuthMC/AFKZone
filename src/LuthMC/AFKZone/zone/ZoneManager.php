@@ -37,7 +37,11 @@ class ZoneManager {
         $this->afkZonesConfig->set($zoneName, [
             "world" => $pos1->getWorld()->getFolderName(),
             "pos1" => [$pos1->getX(), $pos1->getY(), $pos1->getZ()],
-            "pos2" => [$pos2->getX(), $pos2->getY(), $pos2->getZ()]
+            "pos2" => [$pos2->getX(), $pos2->getY(), $pos2->getZ()],
+            "rewards" => [
+                "money" => 100,
+                "items" => []
+            ]
         ]);
 
         $this->afkZonesConfig->save();
@@ -84,6 +88,30 @@ class ZoneManager {
         return false;
     }
 
+    public function getPlayerZoneName(Player $player): ?string {
+        foreach ($this->getAllZones() as $zoneName => $zoneData) {
+            $world = $this->plugin->getServer()->getWorldManager()->getWorldByName($zoneData["world"]);
+
+            if ($world === null || $player->getWorld() !== $world) {
+                continue;
+            }
+
+            $pos1 = new Vector3($zoneData["pos1"][0], $zoneData["pos1"][1], $zoneData["pos1"][2]);
+            $pos2 = new Vector3($zoneData["pos2"][0], $zoneData["pos2"][1], $zoneData["pos2"][2]);
+            $playerPos = $player->getPosition();
+
+            if (
+                $playerPos->x >= min($pos1->x, $pos2->x) && $playerPos->x <= max($pos1->x, $pos2->x) &&
+                $playerPos->y >= min($pos1->y, $pos2->y) && $playerPos->y <= max($pos1->y, $pos2->y) &&
+                $playerPos->z >= min($pos1->z, $pos2->z) && $playerPos->z <= max($pos1->z, $pos2->z)
+            ) {
+                return $zoneName;
+            }
+        }
+
+        return null;
+    }
+
     public function teleportToZone(Player $player, string $zoneName): bool {
         $zoneData = $this->getZoneData($zoneName);
 
@@ -108,5 +136,25 @@ class ZoneManager {
 
         $player->teleport($center);
         return true;
+    }
+
+    public function getZoneRewards(string $zoneName): array {
+        $zoneData = $this->getZoneData($zoneName);
+        if ($zoneData === null) {
+            return ["money" => 0, "items" => []];
+        }
+        return $zoneData["rewards"] ?? ["money" => 0, "items" => []];
+    }
+
+    public function setZoneRewards(string $zoneName, int $money, array $items): void {
+        $zoneData = $this->getZoneData($zoneName);
+        if ($zoneData !== null) {
+            $zoneData["rewards"] = [
+                "money" => $money,
+                "items" => $items
+            ];
+            $this->afkZonesConfig->set($zoneName, $zoneData);
+            $this->afkZonesConfig->save();
+        }
     }
 }

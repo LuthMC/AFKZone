@@ -13,27 +13,29 @@ use pocketmine\utils\Config;
 use pocketmine\player\Player;
 use pocketmine\world\sound\PopSound;
 use pocketmine\world\sound\ClickSound;
+use pocketmine\item\VanillaItems;
 use LuthMC\AFKZone\command\CommandHandler;
 use LuthMC\AFKZone\ui\UIHandler;
 use LuthMC\AFKZone\zone\ZoneManager;
 use LuthMC\AFKZone\economy\EconomyHandler;
-use LuthMC\AFKZone\entity\FloatingTextHandler;
 use LuthMC\AFKZone\listener\AFKListener;
 use LuthMC\AFKZone\listener\ScoreHudListener;
 
 class Main extends PluginBase implements Listener {
 
     private Config $afkZonesConfig;
-    private Config $leaderboardConfig;
     private Config $messagesConfig;
     private array $playerAFKTimes = [];
-    private array $lastStayNotifyTime = [];
+    private array $playerInZone = [];
+    private array $lastTitleNotifyTime = [];
+    private array $lastActionbarNotifyTime = [];
+    private array $playerCurrentZone = [];
 
     private CommandHandler $commandHandler;
     private UIHandler $uiHandler;
     private ZoneManager $zoneManager;
     private EconomyHandler $economyHandler;
-    private FloatingTextHandler $floatingTextHandler;
+    private ?ScoreHudListener $scoreHudListener = null;
 
     protected function onEnable(): void {
         $this->getServer()->getPluginManager()->registerEvents($this, $this);
@@ -43,7 +45,6 @@ class Main extends PluginBase implements Listener {
 
         @mkdir($this->getDataFolder() . "data/");
         $this->afkZonesConfig = new Config($this->getDataFolder() . "data/afkzones.yml", Config::YAML);
-        $this->leaderboardConfig = new Config($this->getDataFolder() . "data/leaderboard.yml", Config::YAML);
         
         $this->messagesConfig = new Config($this->getDataFolder() . "messages.yml", Config::YAML);
         $this->setupMessagesConfig();
@@ -51,24 +52,25 @@ class Main extends PluginBase implements Listener {
         $this->zoneManager = new ZoneManager($this, $this->afkZonesConfig);
         $this->economyHandler = new EconomyHandler($this->getServer(), $config, $this->messagesConfig);
         $this->uiHandler = new UIHandler($this);
-        $this->floatingTextHandler = new FloatingTextHandler($this, $this->leaderboardConfig);
         $this->commandHandler = new CommandHandler($this);
 
         $this->getServer()->getPluginManager()->registerEvents(new AFKListener($this), $this);
 
         $this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function (): void {
-            $this->updatePlayerAFKTimes();
-            $this->checkRewards();
+            foreach ($this->getServer()->getOnlinePlayers() as $player) {
+                $playerName = $player->getName();
+                $isInZone = $this->zoneManager->isPlayerInAFKZone($player);
+                
+                if ($isInZone) {
+                    $this->playerAFKTimes[$playerName] = ($this->playerAFKTimes[$playerName] ?? 0) + 1;
+                    $this->processTick($player);
+                }
+            }
         }), 20);
 
-        $this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function (): void {
-            $this->floatingTextHandler->updateLeaderboards();
-        }), 20 * 60);
-
-        $this->floatingTextHandler->loadFloatingTexts();
-
         if ($this->getServer()->getPluginManager()->getPlugin("ScoreHud") !== null) {
-            $this->getServer()->getPluginManager()->registerEvents(new ScoreHudListener($this), $this);
+            $this->scoreHudListener = new ScoreHudListener($this);
+            $this->getServer()->getPluginManager()->registerEvents($this->scoreHudListener, $this);
         }
     }
 
@@ -122,35 +124,146 @@ class Main extends PluginBase implements Listener {
         }
     }
 
-    private function updatePlayerAFKTimes(): void {
-        foreach ($this->getServer()->getOnlinePlayers() as $player) {
-            $playerName = $player->getName();
+    private function processTick(Player $player): void {
+        $playerName = $player->getName();
+        $config = $this->getConfig();
+        $rewardTimer = $config->get("rewards", [])["timer"] ?? 60;
+        $currentZone = $this->zoneManager->getPlayerZoneName($player);
 
-            if ($this->zoneManager->isPlayerInAFKZone($player)) {
-                $this->playerAFKTimes[$playerName] = ($this->playerAFKTimes[$playerName] ?? 0) + 1;
+        if ($currentZone === null) {
+            if (isset($this->playerAFKTimes[$playerName])) {
+                unset($this->playerAFKTimes[$playerName]);
+            }
+            return;
+        }
+
+        $this->setPlayerCurrentZone($playerName, $currentZone);
+        $time = $this->playerAFKTimes[$playerName] ?? 0;
+        $timeInCycle = $time % $rewardTimer;
+        $secondsUntilReward = max(1, $rewardTimer - $timeInCycle);
+
+        $this->displayStayMessages($player, $secondsUntilReward);
+        $this->updateScoreHud($player);
+
+        if ($time > 0 && $time % $rewardTimer === 0) {
+            $this->giveRewards($player, $currentZone);
+            $this->playerAFKTimes[$playerName] = 0;
+            unset($this->lastActionbarNotifyTime[$playerName]);
+            unset($this->lastTitleNotifyTime[$playerName]);
+        }
+    }
+
+    private function displayStayMessages(Player $player, int $secondsUntilReward): void {
+        $playerName = $player->getName();
+        $messages = $this->messagesConfig->get("messages", []);
+
+        $titleRefresh = $messages["title"]["stay"]["refresh"] ?? 1;
+        $actionbarRefresh = $messages["actionbar"]["stay"]["refresh"] ?? 1;
+
+        if (isset($messages["actionbar"]["stay"]["enabled"]) && $messages["actionbar"]["stay"]["enabled"]) {
+            $lastActionbarTime = $this->lastActionbarNotifyTime[$playerName] ?? 0;
+            $timeSinceActionbar = ($this->playerAFKTimes[$playerName] ?? 0) - $lastActionbarTime;
+
+            if ($timeSinceActionbar >= $actionbarRefresh) {
+                $text = $messages["actionbar"]["stay"]["text"] ?? "Reward in: {countdown}s";
+                $text = str_replace("{countdown}", (string)$secondsUntilReward, $text);
+                $player->sendActionBarMessage($text);
+                $this->lastActionbarNotifyTime[$playerName] = $this->playerAFKTimes[$playerName] ?? 0;
+            }
+        }
+
+        if (isset($messages["title"]["stay"]["enabled"]) && $messages["title"]["stay"]["enabled"]) {
+            $lastTitleTime = $this->lastTitleNotifyTime[$playerName] ?? 0;
+            $timeSinceTitle = ($this->playerAFKTimes[$playerName] ?? 0) - $lastTitleTime;
+
+            if ($timeSinceTitle >= $titleRefresh) {
+                $title = $messages["title"]["stay"]["title"] ?? "AFKZone";
+                $subtitle = $messages["title"]["stay"]["subtitle"] ?? "Reward in: {countdown}s";
+                $subtitle = str_replace("{countdown}", (string)$secondsUntilReward, $subtitle);
+                $player->sendTitle($title, $subtitle, 0, 25, 5);
+                $this->lastTitleNotifyTime[$playerName] = $this->playerAFKTimes[$playerName] ?? 0;
             }
         }
     }
 
+    private function giveRewards(Player $player, string $zoneName): void {
+        $zoneRewards = $this->zoneManager->getZoneRewards($zoneName);
+        $moneyAmount = $zoneRewards["money"] ?? 100;
+
+        $this->economyHandler->giveMoney($player, $moneyAmount);
+        $this->giveZoneItems($player, $zoneName);
+    }
+
+    private function updatePlayerAFKTimes(): void {
+    }
+
     private function checkRewards(): void {
-        $rewardTimer = $this->getConfig()->get("rewards", [])["timer"] ?? 60;
-        $moneyAmount = $this->getConfig()->get("rewards", [])["money"] ?? 100;
+    }
 
-        foreach ($this->getServer()->getOnlinePlayers() as $player) {
-            $playerName = $player->getName();
+    private function giveZoneItems(Player $player, string $zoneName): void {
+        $zoneRewards = $this->zoneManager->getZoneRewards($zoneName);
+        $items = $zoneRewards["items"] ?? [];
+        
+        if (!is_array($items)) {
+            return;
+        }
 
-            if ($this->zoneManager->isPlayerInAFKZone($player)) {
-                $time = $this->playerAFKTimes[$playerName] ?? 0;
-                
-                $secondsUntilReward = ($rewardTimer - ($time % $rewardTimer));
-                $this->notifyStay($player, $secondsUntilReward);
+        $messages = $this->messagesConfig->get("messages", []);
+        $itemRewardMessage = $messages["reward"]["item"] ?? "§aYou received §f{item}§a x§f{amount}§a!";
 
-                if ($time > 0 && $time % $rewardTimer === 0) {
-                    $this->economyHandler->giveMoney($player, $moneyAmount);
-                    $this->economyHandler->giveItems($player);
-                }
+        foreach ($items as $itemData) {
+            if (!is_array($itemData)) {
+                continue;
+            }
+
+            $itemName = $itemData["item"] ?? "";
+            $amount = $itemData["amount"] ?? 1;
+
+            if (empty($itemName)) {
+                continue;
+            }
+
+            $item = $this->getItemByName($itemName, $amount);
+
+            if ($item !== null) {
+                $player->getInventory()->addItem($item);
+                $itemDisplayName = $item->getCustomName() !== "" ? $item->getCustomName() : $item->getName();
+                $message = str_replace("{item}", $itemDisplayName, $itemRewardMessage);
+                $message = str_replace("{amount}", (string)$amount, $message);
+                $player->sendMessage($message);
+            } else {
+                $player->sendMessage("§cItem $itemName not found!");
             }
         }
+    }
+
+    private function getItemByName(string $itemName, int $amount): ?\pocketmine\item\Item {
+        $methodName = strtoupper(str_replace([" ", "-"], "_", $itemName));
+        
+        try {
+            $item = call_user_func([VanillaItems::class, $methodName]);
+            if ($item instanceof \pocketmine\item\Item) {
+                $item->setCount($amount);
+                return $item;
+            }
+        } catch (\Throwable $e) {
+            return null;
+        }
+        
+        return null;
+    }
+
+    public function isValidItemName(string $itemName): bool {
+        $methodName = strtoupper(str_replace(" ", "_", $itemName));
+        
+        try {
+            $item = call_user_func([VanillaItems::class, $methodName]);
+            return $item instanceof \pocketmine\item\Item;
+        } catch (\Throwable $e) {
+            return false;
+        }
+        
+        return false;
     }
 
     public function getCommandHandler(): CommandHandler {
@@ -169,8 +282,16 @@ class Main extends PluginBase implements Listener {
         return $this->economyHandler;
     }
 
-    public function getFloatingTextHandler(): FloatingTextHandler {
-        return $this->floatingTextHandler;
+    public function getPlayerCurrentZone(string $playerName): ?string {
+        return $this->playerCurrentZone[$playerName] ?? null;
+    }
+
+    public function setPlayerCurrentZone(string $playerName, ?string $zoneName): void {
+        if ($zoneName === null) {
+            unset($this->playerCurrentZone[$playerName]);
+        } else {
+            $this->playerCurrentZone[$playerName] = $zoneName;
+        }
     }
 
     public function getPlayerAFKTime(string $playerName): int {
@@ -193,6 +314,7 @@ class Main extends PluginBase implements Listener {
         }
 
         $this->playSound($player, "enter");
+        $this->updateScoreHud($player);
     }
 
     public function notifyLeave(Player $player): void {
@@ -200,7 +322,7 @@ class Main extends PluginBase implements Listener {
         
         if (isset($messages["title"]["leave"]["enabled"]) && $messages["title"]["leave"]["enabled"]) {
             $title = $messages["title"]["leave"]["title"] ?? "AFKZone";
-            $subtitle = $messages["title"]["leave"]["subtitle"] ?? "Left AFK Zone";
+            $subtitle = $messages["title"]["leave"]["subtitle"] ?? "Left AFKZone";
             $player->sendTitle($title, $subtitle);
         }
 
@@ -211,44 +333,24 @@ class Main extends PluginBase implements Listener {
         }
 
         $this->playSound($player, "leave");
+        $this->updateScoreHud($player, "Not Found");
     }
 
-    public function notifyStay(Player $player, int $secondsUntilReward): void {
-        $messages = $this->messagesConfig->get("messages", []);
-        $playerName = $player->getName();
-        $currentTime = time();
-        $lastNotifyTime = $this->lastStayNotifyTime[$playerName] ?? 0;
-
-        $actionbarRefresh = 1;
-        $titleRefresh = 1;
-
-        if (isset($messages["actionbar"]["stay"]["refresh"])) {
-            $actionbarRefresh = $messages["actionbar"]["stay"]["refresh"];
-        }
-        if (isset($messages["title"]["stay"]["refresh"])) {
-            $titleRefresh = $messages["title"]["stay"]["refresh"];
+    private function updateScoreHud(Player $player, ?string $value = null): void {
+        if ($this->scoreHudListener === null) {
+            return;
         }
 
-        if (($currentTime - $lastNotifyTime) >= min($actionbarRefresh, $titleRefresh)) {
-            $this->lastStayNotifyTime[$playerName] = $currentTime;
-
-            if (isset($messages["actionbar"]["stay"]["enabled"]) && $messages["actionbar"]["stay"]["enabled"]) {
-                if (($currentTime - $lastNotifyTime) >= $actionbarRefresh) {
-                    $text = $messages["actionbar"]["stay"]["text"] ?? "Reward in: {countdown}s";
-                    $text = str_replace("{countdown}", (string)$secondsUntilReward, $text);
-                    $player->sendActionBarMessage($text);
-                }
-            }
-
-            if (isset($messages["title"]["stay"]["enabled"]) && $messages["title"]["stay"]["enabled"]) {
-                if (($currentTime - $lastNotifyTime) >= $titleRefresh) {
-                    $title = $messages["title"]["stay"]["title"] ?? "AFKZone";
-                    $subtitle = $messages["title"]["stay"]["subtitle"] ?? "Reward in: {countdown}s";
-                    $subtitle = str_replace("{countdown}", (string)$secondsUntilReward, $subtitle);
-                    $player->sendTitle($title, $subtitle);
-                }
-            }
+        if ($value === null) {
+            $config = $this->getConfig();
+            $rewardTimer = $config->get("rewards", [])["timer"] ?? 60;
+            $time = $this->getPlayerAFKTime($player->getName());
+            $timeInCycle = $time % $rewardTimer;
+            $secondsUntilReward = max(1, $rewardTimer - $timeInCycle);
+            $value = $secondsUntilReward . "s";
         }
+
+        $this->scoreHudListener->updatePlayerTag($player, $value);
     }
 
     private function playSound(Player $player, string $type): void {
@@ -272,11 +374,18 @@ class Main extends PluginBase implements Listener {
         $this->playerAFKTimes[$playerName] = $time;
     }
 
+    public function resetPlayerAFKTime(string $playerName): void {
+        $this->playerAFKTimes[$playerName] = 0;
+        unset($this->lastActionbarNotifyTime[$playerName]);
+        unset($this->lastTitleNotifyTime[$playerName]);
+    }
+
     public function getFormattedAFKTime(string $playerName): string {
-        $time = $this->playerAFKTimes[$playerName] ?? 0;
-        $hours = intdiv($time, 3600);
-        $minutes = intdiv($time % 3600, 60);
-        $seconds = $time % 60;
+        $timeTicks = $this->playerAFKTimes[$playerName] ?? 0;
+        $timeSeconds = intdiv($timeTicks, 20);
+        $hours = intdiv($timeSeconds, 3600);
+        $minutes = intdiv($timeSeconds % 3600, 60);
+        $seconds = $timeSeconds % 60;
 
         return sprintf("%02d:%02d:%02d", $hours, $minutes, $seconds);
     }
