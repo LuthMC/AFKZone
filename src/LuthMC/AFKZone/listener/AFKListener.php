@@ -18,6 +18,7 @@ class AFKListener implements Listener {
         $player = $event->getPlayer();
         $playerName = $player->getName();
         $zoneManager = $this->plugin->getZoneManager();
+        $config = $this->plugin->getConfig();
 
         $isInZone = $zoneManager->isPlayerInAFKZone($player);
         $wasInZone = $this->playerInZone[$playerName] ?? false;
@@ -25,10 +26,15 @@ class AFKListener implements Listener {
         if ($isInZone && !$wasInZone) {
             $this->playerInZone[$playerName] = true;
             $this->plugin->notifyEnter($player);
-            $this->plugin->addPlayerAFKTime($playerName, 0);
         } elseif (!$isInZone && $wasInZone) {
             unset($this->playerInZone[$playerName]);
             $this->plugin->notifyLeave($player);
+        }
+
+        $preventMovement = $config->get("prevent-movement", [])["enabled"] ?? false;
+        
+        if ($isInZone && $preventMovement && $event->getFrom()->distance($event->getTo()) > 0) {
+            $this->plugin->resetPlayerAFKTime($playerName);
         }
     }
 }
