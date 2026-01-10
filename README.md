@@ -1,4 +1,9 @@
-# AFKZone V3 (3.0.2)
+<p align="center">
+ <img width="100px" src="https://i.ibb.co/5hRBdHGm/icon.png" align="center" alt="Icon" />
+ <h2 align="center">AFKZone</h2>
+ <p align="center">A simple afkzone plugin for PocketMine-MP</p>
+</p>
+
 [![](https://poggit.pmmp.io/shield.state/AFKZone)](https://poggit.pmmp.io/p/AFKZone) [![](https://poggit.pmmp.io/shield.dl/AFKZone)](https://poggit.pmmp.io/p/AFKZone) [![GitHub contributors](https://img.shields.io/github/contributors/LuthMC/AFKZone)](https://github.com/LuthMC/AFKZone/graphs/contributors)
 ### 💡 Feature                           
 • Multiple Zones                                                             
