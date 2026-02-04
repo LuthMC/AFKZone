@@ -13,6 +13,7 @@ use pocketmine\utils\Config;
 use pocketmine\player\Player;
 use pocketmine\world\sound\PopSound;
 use pocketmine\world\sound\ClickSound;
+use pocketmine\world\sound\AmethystBlockChimeSound;
 use pocketmine\item\VanillaItems;
 use LuthMC\AFKZone\command\CommandHandler;
 use LuthMC\AFKZone\ui\UIHandler;
@@ -29,6 +30,7 @@ class Main extends PluginBase implements Listener {
     private array $playerInZone = [];
     private array $lastTitleNotifyTime = [];
     private array $lastActionbarNotifyTime = [];
+    private array $lastInventoryFullNotifyTime = [];
     private array $playerCurrentZone = [];
 
     private CommandHandler $commandHandler;
@@ -143,6 +145,7 @@ class Main extends PluginBase implements Listener {
         $secondsUntilReward = max(1, $rewardTimer - $timeInCycle);
 
         $this->displayStayMessages($player, $secondsUntilReward);
+        $this->checkInventoryFull($player, $currentZone);
         $this->updateScoreHud($player);
 
         if ($time > 0 && $time % $rewardTimer === 0) {
@@ -150,6 +153,7 @@ class Main extends PluginBase implements Listener {
             $this->playerAFKTimes[$playerName] = 0;
             unset($this->lastActionbarNotifyTime[$playerName]);
             unset($this->lastTitleNotifyTime[$playerName]);
+            unset($this->lastInventoryFullNotifyTime[$playerName]);
         }
     }
 
@@ -183,6 +187,60 @@ class Main extends PluginBase implements Listener {
                 $player->sendTitle($title, $subtitle, 0, 25, 5);
                 $this->lastTitleNotifyTime[$playerName] = $this->playerAFKTimes[$playerName] ?? 0;
             }
+        }
+    }
+
+    private function checkInventoryFull(Player $player, string $zoneName): void {
+        $config = $this->getConfig();
+        $preventInventoryFull = $config->get("prevent-inventory-full", [])["enabled"] ?? false;
+
+        if (!$preventInventoryFull) {
+            return;
+        }
+
+        $playerName = $player->getName();
+        $currentTick = $this->playerAFKTimes[$playerName] ?? 0;
+        $lastNotifyTime = $this->lastInventoryFullNotifyTime[$playerName] ?? 0;
+
+        if ($currentTick - $lastNotifyTime < 60) {
+            return;
+        }
+
+        $zoneRewards = $this->zoneManager->getZoneRewards($zoneName);
+        $items = $zoneRewards["items"] ?? [];
+        $inventory = $player->getInventory();
+
+        $cannotAddItem = false;
+
+        foreach ($items as $itemData) {
+            if (!is_array($itemData)) {
+                continue;
+            }
+
+            $itemName = $itemData["item"] ?? "";
+            $amount = $itemData["amount"] ?? 1;
+
+            if (empty($itemName)) {
+                continue;
+            }
+
+            $item = $this->getItemByName($itemName, $amount);
+
+            if ($item !== null) {
+                $canAddQuantity = $inventory->getAddableItemQuantity($item);
+                if ($canAddQuantity < $amount) {
+                    $cannotAddItem = true;
+                    break;
+                }
+            }
+        }
+
+        if ($cannotAddItem) {
+            $title = "§c⚠ Inventory Full";
+            $subtitle = "§cYour inventory is full!";
+            $player->sendTitle($title, $subtitle, 0, 25, 5);
+            $player->getWorld()->addSound($player->getPosition(), new AmethystBlockChimeSound());
+            $this->lastInventoryFullNotifyTime[$playerName] = $currentTick;
         }
     }
 
