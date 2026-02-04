@@ -5,3 +5,6 @@ rewards:
 
 prevent-movement:
   enabled: false
+
+prevent-inventory-full:
+  enabled: true
