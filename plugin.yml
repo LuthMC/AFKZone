@@ -1,9 +1,9 @@
 name: AFKZone
 main: LuthMC\AFKZone\Main
 author: LuthMC
-version: 3.0.2
+version: 3.0.3
 api: 5.0.0
-depend: ["ScoreHud"]
+softdepend: ["ScoreHud"]
 website: https://github.com/LuthMC/AFKZone
 commands:
   afkzone:
